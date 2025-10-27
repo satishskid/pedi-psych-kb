@@ -1,0 +1,49 @@
+{
+  "name": "pedi-psych-app",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:kb-api\" \"npm run dev:app-api\" \"npm run dev:ops-api\" \"npm run dev:frontend\"",
+    "dev:kb-api": "cd apps/kb-api && wrangler dev",
+    "dev:app-api": "cd apps/app-api && wrangler dev",
+    "dev:ops-api": "cd apps/ops-api && wrangler dev",
+    "dev:frontend": "cd apps/frontend && vite",
+    "build": "npm run build:shared && npm run build:kb-api && npm run build:app-api && npm run build:ops-api && npm run build:frontend",
+    "build:shared": "cd packages/shared && tsc",
+    "build:kb-api": "cd apps/kb-api && tsc",
+    "build:app-api": "cd apps/app-api && tsc",
+    "build:ops-api": "cd apps/ops-api && tsc",
+    "build:frontend": "cd apps/frontend && vite build",
+    "deploy": "npm run deploy:kb-api && npm run deploy:app-api && npm run deploy:ops-api && npm run deploy:frontend",
+    "deploy:kb-api": "cd apps/kb-api && wrangler deploy",
+    "deploy:app-api": "cd apps/app-api && wrangler deploy",
+    "deploy:ops-api": "cd apps/ops-api && wrangler deploy",
+    "deploy:frontend": "cd apps/frontend && wrangler pages deploy dist",
+    "seed:kb": "ts-node scripts/seed_kb_to_kv.ts",
+    "seed:policies": "ts-node scripts/seed_policies.ts",
+    "seed:locales": "ts-node scripts/seed_locales.ts",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241018.0",
+    "@types/node": "^20.8.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.51.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.4",
+    "@typescript-eslint/parser": "^6.7.4",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.6",
+    "wrangler": "^3.15.0"
+  },
+  "dependencies": {
+    "hono": "^3.8.0",
+    "zod": "^3.22.4"
+  }
+}

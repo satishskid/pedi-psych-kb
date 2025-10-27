@@ -1,0 +1,23 @@
+{
+  "name": "ops-api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^3.8.0",
+    "@hono/zod-validator": "^0.1.8",
+    "zod": "^3.22.4",
+    "@pedi-psych/shared": "file:../../packages/shared"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241018.0",
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.2",
+    "wrangler": "^3.15.0"
+  }
+}
