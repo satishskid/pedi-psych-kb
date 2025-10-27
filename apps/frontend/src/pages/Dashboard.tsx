@@ -1,77 +1,490 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Shield, Users, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { 
+  Search, BookOpen, MessageCircle, Users, FileText, Heart, 
+  TrendingUp, Clock, Star, AlertCircle, CheckCircle, 
+  Calendar, Download, Eye, Filter, Plus, Edit, Settings 
+} from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { Card } from '@pedi-psych/shared'
+
+interface DashboardStats {
+  totalCards: number
+  recentSearches: number
+  bookmarkedCards: number
+  recentExports: number
+}
+
+interface QuickAction {
+  title: string
+  description: string
+  icon: React.ElementType
+  action: () => void
+  variant?: 'primary' | 'secondary'
+}
+
+interface RecentActivity {
+  type: 'search' | 'export' | 'bookmark' | 'view'
+  title: string
+  timestamp: string
+  details?: string
+}
 
 const Dashboard: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCards: 0,
+    recentSearches: 0,
+    bookmarkedCards: 0,
+    recentExports: 0
+  })
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
+  const [bookmarkedCards, setBookmarkedCards] = useState<Card[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const stats = [
-    { name: 'Total Cards', value: '1,234', icon: FileText },
-    { name: 'Active Users', value: '567', icon: Users },
-    { name: 'Searches Today', value: '89', icon: Search },
-    { name: 'Policy Rules', value: '45', icon: Shield },
-  ]
+  const isRTL = i18n.language === 'ar'
+
+  // Role-specific content and actions
+  const getRoleSpecificContent = () => {
+    switch (user?.role) {
+      case 'clinician':
+        return {
+          welcomeTitle: "Clinical Dashboard",
+          welcomeMessage: "Access evidence-based protocols, assessment tools, and treatment guidance tailored for clinical practice.",
+          primaryActions: [
+            {
+              title: "Search Clinical Protocols",
+              description: "Find condition-specific treatment guidelines and assessment tools",
+              icon: Search,
+              action: () => navigate('/app/search?type=clinical'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Browse by Condition",
+              description: "Explore organized content by diagnostic categories",
+              icon: BookOpen,
+              action: () => navigate('/app/book?filter=conditions'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Assessment Tools",
+              description: "Access validated scales and screening instruments",
+              icon: FileText,
+              action: () => navigate('/app/search?type=assessment'),
+              variant: 'secondary' as const
+            },
+            {
+              title: "Cultural Considerations",
+              description: "Region-specific guidance for diverse populations",
+              icon: Users,
+              action: () => navigate('/app/search?type=cultural'),
+              variant: 'secondary' as const
+            }
+          ],
+          stats: [
+            { name: 'Clinical Protocols', value: '2,847', icon: FileText },
+            { name: 'Assessment Tools', value: '156', icon: TrendingUp },
+            { name: 'Recent Searches', value: '23', icon: Search },
+            { name: 'Bookmarked Cases', value: '12', icon: Star }
+          ]
+        }
+      case 'parent':
+        return {
+          welcomeTitle: "Parent Support Center",
+          welcomeMessage: "Find age-appropriate guidance, practical strategies, and emotional support for your child's behavioral development.",
+          primaryActions: [
+            {
+              title: "Search Parent Resources",
+              description: "Find guidance for your child's specific age and challenges",
+              icon: Search,
+              action: () => navigate('/app/search?type=parent-friendly'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Developmental Milestones",
+              description: "Understand what's typical at each age and stage",
+              icon: Heart,
+              action: () => navigate('/app/book?filter=development'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Ask the Expert Chat",
+              description: "Get personalized guidance from our AI assistant",
+              icon: MessageCircle,
+              action: () => navigate('/app/chatbot'),
+              variant: 'secondary' as const
+            },
+            {
+              title: "Parent Community",
+              description: "Connect with other parents facing similar challenges",
+              icon: Users,
+              action: () => navigate('/app/community'),
+              variant: 'secondary' as const
+            }
+          ],
+          stats: [
+            { name: 'Parent Resources', value: '1,234', icon: Heart },
+            { name: 'Age-Specific Guides', value: '8', icon: Users },
+            { name: 'Saved Articles', value: '15', icon: Star },
+            { name: 'Chat Sessions', value: '7', icon: MessageCircle }
+          ]
+        }
+      case 'educator':
+        return {
+          welcomeTitle: "Educator Resource Hub",
+          welcomeMessage: "Access classroom strategies, behavioral interventions, and educational resources for supporting students' mental health.",
+          primaryActions: [
+            {
+              title: "Classroom Strategies",
+              description: "Find evidence-based interventions for classroom challenges",
+              icon: Search,
+              action: () => navigate('/app/search?type=classroom'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Behavioral Interventions",
+              description: "Step-by-step guides for common behavioral issues",
+              icon: BookOpen,
+              action: () => navigate('/app/book?filter=behavioral'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Individual Education Plans",
+              description: "Templates and guidance for IEP development",
+              icon: FileText,
+              action: () => navigate('/app/search?type=iep'),
+              variant: 'secondary' as const
+            },
+            {
+              title: "Professional Development",
+              description: "Training resources and continuing education",
+              icon: TrendingUp,
+              action: () => navigate('/app/training'),
+              variant: 'secondary' as const
+            }
+          ],
+          stats: [
+            { name: 'Classroom Resources', value: '892', icon: FileText },
+            { name: 'Intervention Guides', value: '67', icon: TrendingUp },
+            { name: 'Training Modules', value: '12', icon: BookOpen },
+            { name: 'Student Cases', value: '34', icon: Users }
+          ]
+        }
+      case 'therapist':
+        return {
+          welcomeTitle: "Therapy Resource Center",
+          welcomeMessage: "Access therapeutic techniques, treatment protocols, and specialized resources for pediatric mental health therapy.",
+          primaryActions: [
+            {
+              title: "Therapeutic Techniques",
+              description: "Evidence-based therapy approaches and interventions",
+              icon: Search,
+              action: () => navigate('/app/search?type=therapeutic'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Treatment Protocols",
+              description: "Structured treatment plans for various conditions",
+              icon: BookOpen,
+              action: () => navigate('/app/book?filter=protocols'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Assessment Instruments",
+              description: "Validated tools for therapy evaluation",
+              icon: FileText,
+              action: () => navigate('/app/search?type=assessment'),
+              variant: 'secondary' as const
+            },
+            {
+              title: "Supervision Resources",
+              description: "Guidance for clinical supervision and training",
+              icon: Users,
+              action: () => navigate('/app/supervision'),
+              variant: 'secondary' as const
+            }
+          ],
+          stats: [
+            { name: 'Therapy Protocols', value: '445', icon: FileText },
+            { name: 'Intervention Techniques', value: '89', icon: TrendingUp },
+            { name: 'Assessment Tools', value: '34', icon: Search },
+            { name: 'Supervision Cases', value: '18', icon: Users }
+          ]
+        }
+      default:
+        return {
+          welcomeTitle: "Welcome to Pediatric KB",
+          welcomeMessage: "Access comprehensive pediatric behavioral health resources.",
+          primaryActions: [
+            {
+              title: "Search Knowledge Base",
+              description: "Find guidance for specific conditions",
+              icon: Search,
+              action: () => navigate('/app/search'),
+              variant: 'primary' as const
+            },
+            {
+              title: "Browse Content",
+              description: "Explore organized knowledge cards",
+              icon: BookOpen,
+              action: () => navigate('/app/book'),
+              variant: 'primary' as const
+            }
+          ],
+          stats: [
+            { name: 'Total Cards', value: '1,234', icon: FileText },
+            { name: 'Active Users', value: '567', icon: Users },
+            { name: 'Searches Today', value: '89', icon: Search },
+            { name: 'Policy Rules', value: '45', icon: TrendingUp }
+          ]
+        }
+    }
+  }
+
+  const content = getRoleSpecificContent()
+
+  useEffect(() => {
+    // Simulate loading dashboard data
+    const loadDashboardData = async () => {
+      setLoading(true)
+      try {
+        // Simulate API calls
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Set mock data based on role
+        setStats({
+          totalCards: parseInt(content.stats[0].value.replace(/,/g, '')),
+          recentSearches: parseInt(content.stats[2]?.value?.replace(/,/g, '') || '0'),
+          bookmarkedCards: parseInt(content.stats[2]?.value?.replace(/,/g, '') || '0'),
+          recentExports: 5
+        })
+
+        // Set recent activity
+        setRecentActivity([
+          {
+            type: 'search',
+            title: 'Anxiety management in adolescents',
+            timestamp: '2 hours ago',
+            details: 'Found 12 relevant cards'
+          },
+          {
+            type: 'export',
+            title: 'ADHD classroom strategies',
+            timestamp: '1 day ago',
+            details: 'Exported 3 cards as PDF'
+          },
+          {
+            type: 'bookmark',
+            title: 'Cultural considerations for GCC families',
+            timestamp: '3 days ago'
+          }
+        ])
+
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [user?.role, content.stats])
+
+  const getActivityIcon = (type: RecentActivity['type']) => {
+    switch (type) {
+      case 'search': return Search
+      case 'export': return Download
+      case 'bookmark': return Star
+      case 'view': return Eye
+      default: return CheckCircle
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">{t('app.dashboard')}</h1>
-        <p className="mt-2 text-gray-600">
-          Welcome to the Pediatric Psychology Knowledge Base
-        </p>
+    <div className={`space-y-8 ${isRTL ? 'rtl' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
+        <h1 className="text-3xl font-bold mb-3">{content.welcomeTitle}</h1>
+        <p className="text-indigo-100 text-lg max-w-3xl">{content.welcomeMessage}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.name} className="card">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <stat.icon className="h-8 w-8 text-primary-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">{stat.name}</p>
-                <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {content.stats.map((stat, index) => {
+          const Icon = stat.icon
+          return (
+            <div key={index} className="card bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">{stat.name}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                </div>
+                <div className="p-3 bg-indigo-50 rounded-lg">
+                  <Icon className="h-6 w-6 text-indigo-600" />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="card">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
-          <div className="space-y-3">
-            <button className="w-full text-left px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-              <div className="font-medium text-gray-900">Search Knowledge Base</div>
-              <div className="text-sm text-gray-500">Find guidance for specific conditions</div>
-            </button>
-            <button className="w-full text-left px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-              <div className="font-medium text-gray-900">View Recent Exports</div>
-              <div className="text-sm text-gray-500">Access previously exported materials</div>
-            </button>
+      {/* Main Content Grid */}
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Quick Actions */}
+        <div className="lg:col-span-2">
+          <div className="card bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {content.primaryActions.map((action, index) => {
+                const Icon = action.icon
+                return (
+                  <button
+                    key={index}
+                    onClick={action.action}
+                    className={`p-4 rounded-lg border-2 border-dashed hover:border-solid transition-all text-left ${
+                      action.variant === 'primary' 
+                        ? 'border-indigo-300 hover:border-indigo-500 bg-indigo-50 hover:bg-indigo-100' 
+                        : 'border-gray-300 hover:border-gray-400 bg-gray-50 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className={`p-2 rounded-lg ${
+                        action.variant === 'primary' ? 'bg-indigo-100' : 'bg-gray-100'
+                      }`}>
+                        <Icon className={`h-5 w-5 ${
+                          action.variant === 'primary' ? 'text-indigo-600' : 'text-gray-600'
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">{action.title}</h3>
+                        <p className="text-sm text-gray-600">{action.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="card">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
-          <div className="space-y-3">
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-primary-600 rounded-full mt-2"></div>
-              <div>
-                <div className="text-sm font-medium text-gray-900">New card added</div>
-                <div className="text-sm text-gray-500">Anxiety management for teens</div>
+        {/* Recent Activity */}
+        <div className="card bg-white p-6 rounded-xl shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Activity</h2>
+          <div className="space-y-4">
+            {recentActivity.map((activity, index) => {
+              const Icon = getActivityIcon(activity.type)
+              return (
+                <div key={index} className="flex items-start space-x-3">
+                  <div className="p-2 bg-gray-100 rounded-full">
+                    <Icon className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                    {activity.details && (
+                      <p className="text-xs text-gray-500 mt-1">{activity.details}</p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">{activity.timestamp}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Role-Specific Sections */}
+      {user?.role === 'clinician' && (
+        <div className="grid lg:grid-cols-2 gap-8">
+          <div className="card bg-white p-6 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Cases</h3>
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-medium text-gray-900">Anxiety in 8-year-old</span>
+                  <span className="text-xs text-gray-500">Yesterday</span>
+                </div>
+                <p className="text-sm text-gray-600">Successfully implemented CBT techniques, 60% improvement</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-medium text-gray-900">ADHD Management</span>
+                  <span className="text-xs text-gray-500">2 days ago</span>
+                </div>
+                <p className="text-sm text-gray-600">School-based intervention plan implemented</p>
               </div>
             </div>
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-primary-600 rounded-full mt-2"></div>
-              <div>
-                <div className="text-sm font-medium text-gray-900">Policy updated</div>
-                <div className="text-sm text-gray-500">Export permissions modified</div>
+          </div>
+
+          <div className="card bg-white p-6 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Training</h3>
+            <div className="space-y-3">
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-medium text-gray-900">Cultural Competency</span>
+                  <span className="text-xs text-blue-600">Tomorrow</span>
+                </div>
+                <p className="text-sm text-gray-600">Working with GCC families - 2 hours</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-medium text-gray-900">New Assessment Tools</span>
+                  <span className="text-xs text-gray-500">Next week</span>
+                </div>
+                <p className="text-sm text-gray-600">Updated anxiety screening protocols</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {user?.role === 'parent' && (
+        <div className="grid lg:grid-cols-2 gap-8">
+          <div className="card bg-white p-6 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Child's Development</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Social Skills</p>
+                  <p className="text-sm text-gray-600">Age-appropriate development</p>
+                </div>
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Emotional Regulation</p>
+                  <p className="text-sm text-gray-600">Some challenges noted</p>
+                </div>
+                <AlertCircle className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="card bg-white p-6 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recommended Resources</h3>
+            <div className="space-y-3">
+              <button className="w-full text-left p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                <p className="font-medium text-gray-900">Helping Your Child Manage Anxiety</p>
+                <p className="text-sm text-gray-600">Age 6-8 • Practical strategies</p>
+              </button>
+              <button className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <p className="font-medium text-gray-900">Building Emotional Intelligence</p>
+                <p className="text-sm text-gray-600">Daily activities and games</p>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

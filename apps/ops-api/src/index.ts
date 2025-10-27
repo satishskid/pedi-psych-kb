@@ -10,6 +10,7 @@ import { exportService } from './export'
 
 export interface Env {
   POLICY_STORE: KVNamespace
+  USER_STORE: KVNamespace
   JWT_SECRET: string
 }
 
@@ -17,7 +18,75 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.use('/*', cors())
 
+// Login endpoint (no JWT required) - place before JWT middleware
+const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1)
+})
+
+app.post('/auth/login', zValidator('json', LoginSchema), async (c) => {
+  try {
+    const { email, password } = c.req.valid('json')
+    
+    // For demo purposes, accept hardcoded admin credentials
+    if (email === 'admin@example.com' && password === 'admin123') {
+      const token = await jwt.sign({
+        userId: 'admin-123',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: 'admin',
+        tenantId: 'default',
+        createdAt: new Date().toISOString()
+      }, c.env.JWT_SECRET)
+      
+      return c.json({
+        token,
+        user: {
+          id: 'admin-123',
+          email: 'admin@example.com',
+          name: 'Admin User',
+          role: 'admin',
+          tenant_id: 'default'
+        }
+      })
+    }
+    
+    // Check against stored users (for non-admin users)
+    const userData = await c.env.POLICY_STORE.get(`user:${email}`)
+    if (userData) {
+      const user = JSON.parse(userData)
+      // In a real app, verify password hash
+      if (password === 'demo123') { // Demo password
+        const token = await jwt.sign({
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          tenantId: user.tenant_id,
+          createdAt: user.created_at
+        }, c.env.JWT_SECRET)
+        
+        return c.json({
+          token,
+          user: user
+        })
+      }
+    }
+    
+    return c.json({ error: 'Invalid credentials' }, 401)
+  } catch (error) {
+    console.error('Login error:', error)
+    return c.json({ error: 'Login failed' }, 500)
+  }
+})
+
+// Apply JWT middleware to all /api/* routes EXCEPT /api/auth/login
 app.use('/api/*', async (c, next) => {
+  // Skip JWT for login endpoint
+  if (c.req.path === '/api/auth/login') {
+    return next()
+  }
+  
   const jwtMiddleware = jwt({
     secret: c.env.JWT_SECRET,
   })

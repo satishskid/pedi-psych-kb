@@ -39,26 +39,24 @@ ADMIN_EMAIL = "admin@example.com"
 name = "pedi-app-prod"
 
 [[kv_namespaces]]
-binding = "KB_CACHE"
+binding = "KB_CACHE_PROD"
 id = "KB_CACHE_ID_PROD"
 
 [[kv_namespaces]]
-binding = "POLICY_STORE"
+binding = "POLICY_STORE_PROD"
 id = "POLICY_STORE_ID_PROD"
 
 [[kv_namespaces]]
-binding = "LOCALE_CACHE"
+binding = "LOCALE_CACHE_PROD"
 id = "LOCALE_CACHE_ID_PROD"
 
 [[d1_databases]]
-binding = "DB"
+binding = "DB_PROD"
 database_name = "pedi_db"
 database_id = "D1_ID_PROD"
 
 [[r2_buckets]]
-binding = "EXPORTS"
+binding = "EXPORTS_PROD"
 bucket_name = "kb-exports"
 
-[vars]
-REGION_DEFAULT = "India"
-ADMIN_EMAIL = "admin@example.com"
+# Production variables (no duplicate vars section)

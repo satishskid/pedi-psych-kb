@@ -1,0 +1,15 @@
+{
+  "name": "pedi-psych-kb-database",
+  "version": "1.0.0",
+  "description": "Database setup and seeding for PediPsych KB",
+  "type": "module",
+  "scripts": {
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11"
+  }
+}

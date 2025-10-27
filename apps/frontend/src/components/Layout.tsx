@@ -1,5 +1,5 @@
 import React from 'react'
-import { Outlet, Link, useNavigate } from 'react-router-dom'
+import { Outlet, Link, useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
 import { LogOut, Search, Home, Shield } from 'lucide-react'
@@ -11,7 +11,7 @@ const Layout: React.FC = () => {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/')
   }
 
   const changeLanguage = (lang: string) => {
@@ -19,7 +19,7 @@ const Layout: React.FC = () => {
   }
 
   if (!user) {
-    return <Outlet />
+    return <Navigate to="/login" replace />
   }
 
   const isRTL = i18n.language === 'ar'
@@ -30,19 +30,19 @@ const Layout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
-              <Link to="/" className="text-xl font-bold text-gray-900">
+              <Link to="/app" className="text-xl font-bold text-gray-900">
                 {t('app.title')}
               </Link>
               <div className="flex space-x-4">
                 <Link
-                  to="/"
+                  to="/app"
                   className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                 >
                   <Home className="w-4 h-4 mr-2" />
                   {t('app.dashboard')}
                 </Link>
                 <Link
-                  to="/search"
+                  to="/app/search"
                   className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                 >
                   <Search className="w-4 h-4 mr-2" />
@@ -50,7 +50,7 @@ const Layout: React.FC = () => {
                 </Link>
                 {user.role === 'admin' && (
                   <Link
-                    to="/admin"
+                    to="/app/admin"
                     className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                   >
                     <Shield className="w-4 h-4 mr-2" />
