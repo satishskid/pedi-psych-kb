@@ -1,0 +1,15 @@
+{
+  "name": "pedi-psych-monitoring",
+  "version": "1.0.0",
+  "description": "Monitoring and alerting for Pediatric Psychiatry Knowledge Base",
+  "main": "health-check.js",
+  "scripts": {
+    "health-check": "node health-check.js",
+    "monitor": "node monitor.js",
+    "setup-alerts": "node setup-alerts.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.7"
+  },
+  "devDependencies": {}
+}

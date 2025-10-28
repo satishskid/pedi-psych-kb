@@ -8,55 +8,66 @@ name = "pedi-app-dev"
 
 [[kv_namespaces]]
 binding = "KB_CACHE"
-id = "KB_CACHE_ID_DEV"
-preview_id = "KB_CACHE_PREVIEW_ID_DEV"
+id = "56475353027d40f8829e56934c0dce24"
+preview_id = "e24800ce56b0481cb85a9b82d26afa7d"
 
 [[kv_namespaces]]
 binding = "POLICY_STORE"
-id = "POLICY_STORE_ID_DEV"
-preview_id = "POLICY_STORE_PREVIEW_ID_DEV"
+id = "56475353027d40f8829e56934c0dce24"
+preview_id = "e24800ce56b0481cb85a9b82d26afa7d"
 
 [[kv_namespaces]]
 binding = "LOCALE_CACHE"
-id = "LOCALE_CACHE_ID_DEV"
-preview_id = "LOCALE_CACHE_PREVIEW_ID_DEV"
+id = "56475353027d40f8829e56934c0dce24"
+preview_id = "e24800ce56b0481cb85a9b82d26afa7d"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "pedi_db"
-database_id = "D1_ID_DEV"
+database_id = "ce6fd0f2-b6bf-40b1-a6be-e348d50c6266"
 
-[[r2_buckets]]
-binding = "EXPORTS"
-bucket_name = "kb-exports"
+# [[r2_buckets]]
+# binding = "EXPORTS"
+# bucket_name = "kb-exports"
 
 [vars]
 REGION_DEFAULT = "India"
 JWT_SECRET = "dev-jwt-secret-change-in-production"
-ADMIN_EMAIL = "admin@example.com"
+ADMIN_EMAIL = "satish@skids.health,hello@skids.health"
 
 [env.production]
 name = "pedi-app-prod"
 
 [[kv_namespaces]]
 binding = "KB_CACHE_PROD"
-id = "KB_CACHE_ID_PROD"
+id = "56475353027d40f8829e56934c0dce24"
 
 [[kv_namespaces]]
 binding = "POLICY_STORE_PROD"
-id = "POLICY_STORE_ID_PROD"
+id = "56475353027d40f8829e56934c0dce24"
 
 [[kv_namespaces]]
 binding = "LOCALE_CACHE_PROD"
-id = "LOCALE_CACHE_ID_PROD"
+id = "56475353027d40f8829e56934c0dce24"
+
+[[kv_namespaces]]
+binding = "POLICIES_PROD"
+id = "56475353027d40f8829e56934c0dce24"
+preview_id = "e24800ce56b0481cb85a9b82d26afa7d"
 
 [[d1_databases]]
 binding = "DB_PROD"
 database_name = "pedi_db"
-database_id = "D1_ID_PROD"
+database_id = "ce6fd0f2-b6bf-40b1-a6be-e348d50c6266"
 
-[[r2_buckets]]
-binding = "EXPORTS_PROD"
-bucket_name = "kb-exports"
+# [[r2_buckets]]
+# binding = "EXPORTS_PROD"
+# bucket_name = "kb-exports"
 
-# Production variables (no duplicate vars section)
+[env.production.vars]
+REGION_DEFAULT = "India"
+JWT_SECRET = "prod-jwt-secret-2024-change-immediately"
+ADMIN_EMAIL = "satish@skids.health,hello@skids.health"
+ENVIRONMENT = "production"
+API_BASE_URL = "https://pedi-psych-app.devadmin-27f.workers.dev"
+FRONTEND_URL = "https://d29ad10a.pedi-psych-kb-frontend.pages.dev"

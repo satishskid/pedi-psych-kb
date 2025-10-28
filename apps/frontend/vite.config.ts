@@ -10,12 +10,12 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api/auth/login': {
-        target: 'http://localhost:8789',
+        target: 'http://localhost:8787',
         changeOrigin: true,
         secure: false
       },
       '/api': {
-        target: 'http://localhost:8789',
+        target: 'http://localhost:8787',
         changeOrigin: true,
       }
     }

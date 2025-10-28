@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
@@ -10,7 +11,12 @@ export interface Env {
   JWT_SECRET: string;
 }
 
-const app = new Hono<{ Bindings: Env }>();
+type Bindings = {
+  KB_CACHE: KVNamespace;
+  JWT_SECRET: string;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
 
 app.use('/*', cors());
 
@@ -27,8 +33,8 @@ const SearchRequestSchema = z.object({
   role: z.enum(['admin', 'doctor', 'psychologist', 'parent', 'educator']),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  limit: z.number().int().min(1).max(100).default(20),
-  offset: z.number().int().min(0).default(0),
+  limit: z.number().int().min(1).max(100).optional().default(20),
+  offset: z.number().int().min(0).optional().default(0),
 });
 
 app.get('/api/kb/search', async (c) => {
@@ -118,15 +124,16 @@ async function performSearch(kv: KVNamespace, query: SearchQuery): Promise<Searc
     return titleMatch || descMatch || tagMatch;
   });
 
-  const start = query.offset;
-  const end = start + query.limit;
+  const start = query.offset || 0;
+  const limit = query.limit || 20;
+  const end = start + limit;
   const paginatedCards = filteredCards.slice(start, end);
 
   return {
     cards: paginatedCards,
     total: filteredCards.length,
-    limit: query.limit,
-    offset: query.offset,
+    limit: limit,
+    offset: start,
   };
 }
 
@@ -150,7 +157,15 @@ async function getAllCards(kv: KVNamespace): Promise<Card[]> {
   
   try {
     const cards = JSON.parse(cardsData);
-    return z.array(CardSchema).parse(cards);
+    // Parse each card individually to handle optional fields
+    return cards.map((card: any) => {
+      try {
+        return CardSchema.parse(card);
+      } catch (error) {
+        console.warn('Invalid card data:', error);
+        return null;
+      }
+    }).filter(Boolean) as Card[];
   } catch {
     return [];
   }

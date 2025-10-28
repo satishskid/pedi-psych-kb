@@ -1,0 +1,28 @@
+name = "pedi-psych-app"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pedi-psych-kb-prod"
+database_id = "ce6fd0f2-b6bf-40b1-a6be-e348d50c6266"
+
+[env.production]
+name = "pedi-app-prod"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "pedi-psych-kb-prod"
+database_id = "ce6fd0f2-b6bf-40b1-a6be-e348d50c6266"
+
+[vars]
+JWT_SECRET = "your-jwt-secret-key-here"
+REGION_DEFAULT = "us-east-1"
+GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_SECRET = ""
+
+[env.production.vars]
+JWT_SECRET = "your-jwt-secret-key-here"
+REGION_DEFAULT = "us-east-1"
+GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_SECRET = ""

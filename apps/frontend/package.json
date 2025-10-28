@@ -9,24 +9,25 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.16.0",
-    "react-i18next": "^13.2.2",
+    "@clerk/clerk-react": "^5.53.3",
+    "@pedi-psych/shared": "file:../../packages/shared",
+    "autoprefixer": "^10.4.16",
+    "clsx": "^2.0.0",
     "i18next": "^23.5.1",
     "i18next-browser-languagedetector": "^7.1.0",
     "lucide-react": "^0.290.0",
-    "tailwindcss": "^3.3.5",
-    "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",
-    "clsx": "^2.0.0",
-    "@pedi-psych/shared": "file:../../packages/shared"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^13.2.2",
+    "react-router-dom": "^6.16.0",
+    "tailwindcss": "^3.3.5"
   },
   "devDependencies": {
     "@types/react": "^18.2.28",
     "@types/react-dom": "^18.2.13",
     "@vitejs/plugin-react": "^4.1.0",
-    "vite": "^4.5.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0"
   }
 }

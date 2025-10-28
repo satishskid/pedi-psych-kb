@@ -1,0 +1,62 @@
+# Cloudflare Workers configuration
+name = "pedi-psych-app"
+main = "apps/app-api/src/index.ts"
+compatibility_date = "2024-10-01"
+
+[env.dev]
+name = "pedi-app-dev"
+
+[[kv_namespaces]]
+binding = "KB_CACHE"
+id = "KB_CACHE_ID_DEV"
+preview_id = "KB_CACHE_PREVIEW_ID_DEV"
+
+[[kv_namespaces]]
+binding = "POLICY_STORE"
+id = "POLICY_STORE_ID_DEV"
+preview_id = "POLICY_STORE_PREVIEW_ID_DEV"
+
+[[kv_namespaces]]
+binding = "LOCALE_CACHE"
+id = "LOCALE_CACHE_ID_DEV"
+preview_id = "LOCALE_CACHE_PREVIEW_ID_DEV"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pedi_db"
+database_id = "D1_ID_DEV"
+
+[[r2_buckets]]
+binding = "EXPORTS"
+bucket_name = "kb-exports"
+
+[vars]
+REGION_DEFAULT = "India"
+JWT_SECRET = "dev-jwt-secret-change-in-production"
+ADMIN_EMAIL = "admin@example.com"
+
+[env.production]
+name = "pedi-app-prod"
+
+[[kv_namespaces]]
+binding = "KB_CACHE_PROD"
+id = "KB_CACHE_ID_PROD"
+
+[[kv_namespaces]]
+binding = "POLICY_STORE_PROD"
+id = "POLICY_STORE_ID_PROD"
+
+[[kv_namespaces]]
+binding = "LOCALE_CACHE_PROD"
+id = "LOCALE_CACHE_ID_PROD"
+
+[[d1_databases]]
+binding = "DB_PROD"
+database_name = "pedi_db"
+database_id = "D1_ID_PROD"
+
+[[r2_buckets]]
+binding = "EXPORTS_PROD"
+bucket_name = "kb-exports"
+
+# Production variables (no duplicate vars section)

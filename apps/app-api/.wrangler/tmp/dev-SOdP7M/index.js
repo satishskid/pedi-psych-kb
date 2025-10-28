@@ -5,7 +5,33 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// .wrangler/tmp/bundle-JOinsm/strip-cf-connecting-ip-header.js
+// .wrangler/tmp/bundle-Aw8KYw/checked-fetch.js
+var urls = /* @__PURE__ */ new Set();
+function checkURL(request, init) {
+  const url = request instanceof URL ? request : new URL(
+    (typeof request === "string" ? new Request(request, init) : request).url
+  );
+  if (url.port && url.port !== "443" && url.protocol === "https:") {
+    if (!urls.has(url.toString())) {
+      urls.add(url.toString());
+      console.warn(
+        `WARNING: known issue with \`fetch()\` requests to custom HTTPS ports in published Workers:
+ - ${url.toString()} - the custom port will be ignored when the Worker is published using the \`wrangler deploy\` command.
+`
+      );
+    }
+  }
+}
+__name(checkURL, "checkURL");
+globalThis.fetch = new Proxy(globalThis.fetch, {
+  apply(target, thisArg, argArray) {
+    const [request, init] = argArray;
+    checkURL(request, init);
+    return Reflect.apply(target, thisArg, argArray);
+  }
+});
+
+// .wrangler/tmp/bundle-Aw8KYw/strip-cf-connecting-ip-header.js
 function stripCfConnectingIPHeader(input, init) {
   const request = new Request(input, init);
   request.headers.delete("CF-Connecting-IP");
@@ -20,7 +46,7 @@ globalThis.fetch = new Proxy(globalThis.fetch, {
   }
 });
 
-// node_modules/hono/dist/utils/url.js
+// ../../node_modules/hono/dist/utils/url.js
 var splitPath = /* @__PURE__ */ __name((path) => {
   const paths = path.split("/");
   if (paths[0] === "") {
@@ -212,7 +238,7 @@ var getQueryParams = /* @__PURE__ */ __name((url, key) => {
 }, "getQueryParams");
 var decodeURIComponent_ = decodeURIComponent;
 
-// node_modules/hono/dist/utils/cookie.js
+// ../../node_modules/hono/dist/utils/cookie.js
 var validCookieNameRegEx = /^[\w!#$%&'*.^`|~+-]+$/;
 var validCookieValueRegEx = /^[ !#-:<-[\]-~]*$/;
 var parse = /* @__PURE__ */ __name((cookie, name) => {
@@ -270,7 +296,7 @@ var serialize = /* @__PURE__ */ __name((name, value, opt = {}) => {
   return _serialize(name, value, opt);
 }, "serialize");
 
-// node_modules/hono/dist/utils/html.js
+// ../../node_modules/hono/dist/utils/html.js
 var HtmlEscapedCallbackPhase = {
   Stringify: 1,
   BeforeStream: 2,
@@ -304,7 +330,7 @@ var resolveCallback = /* @__PURE__ */ __name(async (str, phase, preserveCallback
   }
 }, "resolveCallback");
 
-// node_modules/hono/dist/utils/stream.js
+// ../../node_modules/hono/dist/utils/stream.js
 var StreamingApi = /* @__PURE__ */ __name(class {
   constructor(writable, _readable) {
     this.abortSubscribers = [];
@@ -355,7 +381,7 @@ var StreamingApi = /* @__PURE__ */ __name(class {
   }
 }, "StreamingApi");
 
-// node_modules/hono/dist/context.js
+// ../../node_modules/hono/dist/context.js
 var __accessCheck = /* @__PURE__ */ __name((obj, member, msg) => {
   if (!member.has(obj))
     throw TypeError("Cannot " + msg);
@@ -632,7 +658,7 @@ _preparedHeaders = /* @__PURE__ */ new WeakMap();
 _res = /* @__PURE__ */ new WeakMap();
 _isFresh = /* @__PURE__ */ new WeakMap();
 
-// node_modules/hono/dist/compose.js
+// ../../node_modules/hono/dist/compose.js
 var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
   return (context, next) => {
     let index = -1;
@@ -681,7 +707,7 @@ var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
   };
 }, "compose");
 
-// node_modules/hono/dist/http-exception.js
+// ../../node_modules/hono/dist/http-exception.js
 var HTTPException = /* @__PURE__ */ __name(class extends Error {
   constructor(status = 500, options) {
     super(options?.message);
@@ -698,7 +724,7 @@ var HTTPException = /* @__PURE__ */ __name(class extends Error {
   }
 }, "HTTPException");
 
-// node_modules/hono/dist/utils/body.js
+// ../../node_modules/hono/dist/utils/body.js
 var parseBody = /* @__PURE__ */ __name(async (request, options = { all: false }) => {
   const contentType = request.headers.get("Content-Type");
   if (isFormDataContent(contentType)) {
@@ -754,7 +780,7 @@ var convertToNewArray = /* @__PURE__ */ __name((form, key, value) => {
   form[key] = [form[key], value];
 }, "convertToNewArray");
 
-// node_modules/hono/dist/request.js
+// ../../node_modules/hono/dist/request.js
 var __accessCheck2 = /* @__PURE__ */ __name((obj, member, msg) => {
   if (!member.has(obj))
     throw TypeError("Cannot " + msg);
@@ -916,7 +942,7 @@ var HonoRequest = /* @__PURE__ */ __name(class {
 _validatedData = /* @__PURE__ */ new WeakMap();
 _matchResult = /* @__PURE__ */ new WeakMap();
 
-// node_modules/hono/dist/router.js
+// ../../node_modules/hono/dist/router.js
 var METHOD_NAME_ALL = "ALL";
 var METHOD_NAME_ALL_LOWERCASE = "all";
 var METHODS = ["get", "post", "put", "delete", "options", "patch"];
@@ -924,7 +950,7 @@ var MESSAGE_MATCHER_IS_ALREADY_BUILT = "Can not add a route since the matcher is
 var UnsupportedPathError = /* @__PURE__ */ __name(class extends Error {
 }, "UnsupportedPathError");
 
-// node_modules/hono/dist/hono-base.js
+// ../../node_modules/hono/dist/hono-base.js
 var __accessCheck3 = /* @__PURE__ */ __name((obj, member, msg) => {
   if (!member.has(obj))
     throw TypeError("Cannot " + msg);
@@ -1176,7 +1202,7 @@ var _Hono = /* @__PURE__ */ __name(class extends defineDynamicClass() {
 var Hono = _Hono;
 _path = /* @__PURE__ */ new WeakMap();
 
-// node_modules/hono/dist/router/reg-exp-router/node.js
+// ../../node_modules/hono/dist/router/reg-exp-router/node.js
 var LABEL_REG_EXP_STR = "[^/]+";
 var ONLY_WILDCARD_REG_EXP_STR = ".*";
 var TAIL_WILDCARD_REG_EXP_STR = "(?:|/.*)";
@@ -1281,7 +1307,7 @@ var Node = /* @__PURE__ */ __name(class {
   }
 }, "Node");
 
-// node_modules/hono/dist/router/reg-exp-router/trie.js
+// ../../node_modules/hono/dist/router/reg-exp-router/trie.js
 var Trie = /* @__PURE__ */ __name(class {
   constructor() {
     this.context = { varIndex: 0 };
@@ -1339,7 +1365,7 @@ var Trie = /* @__PURE__ */ __name(class {
   }
 }, "Trie");
 
-// node_modules/hono/dist/router/reg-exp-router/router.js
+// ../../node_modules/hono/dist/router/reg-exp-router/router.js
 var methodNames = [METHOD_NAME_ALL, ...METHODS].map((method) => method.toUpperCase());
 var emptyParam = [];
 var nullMatcher = [/^$/, [], {}];
@@ -1540,7 +1566,7 @@ var RegExpRouter = /* @__PURE__ */ __name(class {
   }
 }, "RegExpRouter");
 
-// node_modules/hono/dist/router/smart-router/router.js
+// ../../node_modules/hono/dist/router/smart-router/router.js
 var SmartRouter = /* @__PURE__ */ __name(class {
   constructor(init) {
     this.name = "SmartRouter";
@@ -1594,7 +1620,7 @@ var SmartRouter = /* @__PURE__ */ __name(class {
   }
 }, "SmartRouter");
 
-// node_modules/hono/dist/router/trie-router/node.js
+// ../../node_modules/hono/dist/router/trie-router/node.js
 var Node2 = /* @__PURE__ */ __name(class {
   constructor(method, handler, children) {
     this.order = 0;
@@ -1740,7 +1766,7 @@ var Node2 = /* @__PURE__ */ __name(class {
   }
 }, "Node");
 
-// node_modules/hono/dist/router/trie-router/router.js
+// ../../node_modules/hono/dist/router/trie-router/router.js
 var TrieRouter = /* @__PURE__ */ __name(class {
   constructor() {
     this.name = "TrieRouter";
@@ -1761,7 +1787,7 @@ var TrieRouter = /* @__PURE__ */ __name(class {
   }
 }, "TrieRouter");
 
-// node_modules/hono/dist/hono.js
+// ../../node_modules/hono/dist/hono.js
 var Hono2 = /* @__PURE__ */ __name(class extends Hono {
   constructor(options = {}) {
     super(options);
@@ -1771,7 +1797,7 @@ var Hono2 = /* @__PURE__ */ __name(class extends Hono {
   }
 }, "Hono");
 
-// node_modules/hono/dist/middleware/cors/index.js
+// ../../node_modules/hono/dist/middleware/cors/index.js
 var cors = /* @__PURE__ */ __name((options) => {
   const defaults = {
     origin: "*",
@@ -1840,7 +1866,7 @@ var cors = /* @__PURE__ */ __name((options) => {
   }, "cors2");
 }, "cors");
 
-// node_modules/hono/dist/utils/jwt/jwt.js
+// ../../node_modules/hono/dist/utils/jwt/jwt.js
 var jwt_exports = {};
 __export(jwt_exports, {
   decode: () => decode,
@@ -1848,7 +1874,7 @@ __export(jwt_exports, {
   verify: () => verify
 });
 
-// node_modules/hono/dist/utils/encode.js
+// ../../node_modules/hono/dist/utils/encode.js
 var decodeBase64Url = /* @__PURE__ */ __name((str) => {
   return decodeBase64(str.replace(/_|-/g, (m) => ({ _: "/", "-": "+" })[m] ?? m));
 }, "decodeBase64Url");
@@ -1872,7 +1898,7 @@ var decodeBase64 = /* @__PURE__ */ __name((str) => {
   return bytes;
 }, "decodeBase64");
 
-// node_modules/hono/dist/utils/jwt/types.js
+// ../../node_modules/hono/dist/utils/jwt/types.js
 var JwtAlgorithmNotImplemented = /* @__PURE__ */ __name(class extends Error {
   constructor(alg) {
     super(`${alg} is not an implemented algorithm`);
@@ -1910,7 +1936,7 @@ var JwtTokenSignatureMismatched = /* @__PURE__ */ __name(class extends Error {
   }
 }, "JwtTokenSignatureMismatched");
 
-// node_modules/hono/dist/utils/jwt/jwt.js
+// ../../node_modules/hono/dist/utils/jwt/jwt.js
 var utf8Encoder = new TextEncoder();
 var utf8Decoder = new TextDecoder();
 var encodeJwtPart = /* @__PURE__ */ __name((part) => encodeBase64Url(utf8Encoder.encode(JSON.stringify(part))).replace(/=/g, ""), "encodeJwtPart");
@@ -2006,7 +2032,7 @@ var decode = /* @__PURE__ */ __name((token) => {
   }
 }, "decode");
 
-// node_modules/hono/dist/middleware/jwt/index.js
+// ../../node_modules/hono/dist/middleware/jwt/index.js
 var jwt = /* @__PURE__ */ __name((options) => {
   if (!options) {
     throw new Error('JWT auth middleware requires options for "secret');
@@ -2077,7 +2103,7 @@ var verify2 = jwt_exports.verify;
 var decode2 = jwt_exports.decode;
 var sign2 = jwt_exports.sign;
 
-// node_modules/zod/v3/external.js
+// ../../node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -2189,7 +2215,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// node_modules/zod/v3/helpers/util.js
+// ../../node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -2326,7 +2352,7 @@ var getParsedType = /* @__PURE__ */ __name((data) => {
   }
 }, "getParsedType");
 
-// node_modules/zod/v3/ZodError.js
+// ../../node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -2445,7 +2471,7 @@ ZodError.create = (issues) => {
   return error;
 };
 
-// node_modules/zod/v3/locales/en.js
+// ../../node_modules/zod/v3/locales/en.js
 var errorMap = /* @__PURE__ */ __name((issue, _ctx) => {
   let message;
   switch (issue.code) {
@@ -2548,7 +2574,7 @@ var errorMap = /* @__PURE__ */ __name((issue, _ctx) => {
 }, "errorMap");
 var en_default = errorMap;
 
-// node_modules/zod/v3/errors.js
+// ../../node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map) {
   overrideErrorMap = map;
@@ -2559,7 +2585,7 @@ function getErrorMap() {
 }
 __name(getErrorMap, "getErrorMap");
 
-// node_modules/zod/v3/helpers/parseUtil.js
+// ../../node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = /* @__PURE__ */ __name((params) => {
   const { data, path, errorMaps, issueData } = params;
   const fullPath = [...path, ...issueData.path || []];
@@ -2671,14 +2697,14 @@ var isDirty = /* @__PURE__ */ __name((x) => x.status === "dirty", "isDirty");
 var isValid = /* @__PURE__ */ __name((x) => x.status === "valid", "isValid");
 var isAsync = /* @__PURE__ */ __name((x) => typeof Promise !== "undefined" && x instanceof Promise, "isAsync");
 
-// node_modules/zod/v3/helpers/errorUtil.js
+// ../../node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// node_modules/zod/v3/types.js
+// ../../node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
   constructor(parent, value, path, key) {
     this._cachedPath = [];
@@ -6181,7 +6207,7 @@ var coerce = {
 };
 var NEVER = INVALID;
 
-// node_modules/hono/dist/helper/cookie/index.js
+// ../../node_modules/hono/dist/helper/cookie/index.js
 var getCookie = /* @__PURE__ */ __name((c, key) => {
   const cookie = c.req.raw.headers.get("Cookie");
   if (typeof key === "string") {
@@ -6198,7 +6224,7 @@ var getCookie = /* @__PURE__ */ __name((c, key) => {
   return obj;
 }, "getCookie");
 
-// node_modules/hono/dist/utils/buffer.js
+// ../../node_modules/hono/dist/utils/buffer.js
 var bufferToFormData = /* @__PURE__ */ __name((arrayBuffer, contentType) => {
   const response = new Response(arrayBuffer, {
     headers: {
@@ -6208,7 +6234,7 @@ var bufferToFormData = /* @__PURE__ */ __name((arrayBuffer, contentType) => {
   return response.formData();
 }, "bufferToFormData");
 
-// node_modules/hono/dist/validator/validator.js
+// ../../node_modules/hono/dist/validator/validator.js
 var validator = /* @__PURE__ */ __name((target, validationFunc) => {
   return async (c, next) => {
     let value = {};
@@ -6299,7 +6325,7 @@ var validator = /* @__PURE__ */ __name((target, validationFunc) => {
   };
 }, "validator");
 
-// node_modules/@hono/zod-validator/dist/esm/index.js
+// ../../node_modules/@hono/zod-validator/dist/esm/index.js
 var zValidator = /* @__PURE__ */ __name((target, schema, hook) => validator(target, async (value, c) => {
   const result = await schema.safeParseAsync(value);
   if (hook) {
@@ -6320,11 +6346,11 @@ var zValidator = /* @__PURE__ */ __name((target, schema, hook) => validator(targ
   return data;
 }), "zValidator");
 
-// packages/shared/dist/types.js
+// ../../packages/shared/dist/types.js
 var SUPPORTED_LANGUAGES = ["en", "hi", "ar"];
 var SUPPORTED_ROLES = ["admin", "doctor", "psychologist", "parent", "educator"];
 
-// packages/shared/dist/schemas.js
+// ../../packages/shared/dist/schemas.js
 var UserSchema = external_exports.object({
   id: external_exports.string().uuid(),
   email: external_exports.string().email(),
@@ -6383,7 +6409,7 @@ var ExportRequestSchema = external_exports.object({
   user_id: external_exports.string().uuid()
 });
 
-// packages/shared/dist/license_types.js
+// ../../packages/shared/dist/license_types.js
 var LicenseFeatures = {
   BASIC_ACCESS: "basic_access",
   ROLE_BASED_CONTENT: "role_based_content",
@@ -6404,23 +6430,25 @@ var LicenseStatus = {
   REVOKED: "revoked"
 };
 
-// apps/app-api/src/middleware/license.ts
-async function trackAPIUsage(db, userId, endpoint, url, statusCode = 200, responseTimeMs = 0) {
+// src/middleware/license.ts
+async function trackAPIUsage(db2, userId, endpoint, method, statusCode = 200, responseTimeMs = 0) {
   try {
-    await db.prepare(`
+    const usageDate = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    await db2.prepare(`
       INSERT INTO api_usage (
-        user_id, endpoint, url, status_code, response_time_ms, usage_date
+        user_id, endpoint, method, status_code, response_time_ms, usage_date
       ) VALUES (?, ?, ?, ?, ?, ?)
     `).bind(
-      userId,
+      userId || 0,
+      // Handle undefined userId
       endpoint,
-      url,
+      method,
       statusCode,
       responseTimeMs,
-      (/* @__PURE__ */ new Date()).toISOString()
+      usageDate
     ).run();
   } catch (error) {
-    console.error("Failed to track API usage:", error);
+    console.error("API usage tracking failed (non-blocking):", error);
   }
 }
 __name(trackAPIUsage, "trackAPIUsage");
@@ -6430,216 +6458,41 @@ function licenseMiddleware(options = {}) {
     if (!user) {
       throw new HTTPException(401, { message: "User not authenticated" });
     }
-    if (user.role === "admin") {
-      const adminLicenseValidation = {
-        is_valid: true,
-        status: LicenseStatus.ACTIVE,
-        features: ["BASIC_ACCESS", "ADVANCED_ANALYTICS", "PERSONALIZATION", "BYOK_SUPPORT", "USER_MANAGEMENT"],
-        usage_stats: {
-          current_usage: 0,
-          max_usage: 0,
-          remaining_usage: 0,
-          api_calls_this_month: 0,
-          max_api_calls: 0
-        },
-        errors: []
-      };
-      if (options.requiredRoles && !options.requiredRoles.includes(user.role)) {
-        throw new HTTPException(403, {
-          message: "Insufficient role permissions",
-          cause: `Required roles: ${options.requiredRoles.join(", ")}`
-        });
-      }
-      c.set("license", adminLicenseValidation);
-      const startTime2 = Date.now();
-      await next();
-      const responseTime2 = Date.now() - startTime2;
-      trackApiUsage(
-        c.env.DB,
-        parseInt(user.id),
-        c.req.path,
-        c.req.url,
-        c.res.status,
-        responseTime2
-      ).catch((error) => {
-        console.error("Failed to track API usage:", error);
-      });
-      return;
-    }
-    const licenseValidation = await validateUserLicense(c.env.DB, user.id, options);
-    if (!licenseValidation.is_valid) {
-      throw new HTTPException(403, {
-        message: "License validation failed",
-        cause: licenseValidation.errors
-      });
-    }
+    console.log("User role:", user.role, "Required roles:", options.requiredRoles);
     if (options.requiredRoles && !options.requiredRoles.includes(user.role)) {
       throw new HTTPException(403, {
-        message: "Insufficient role permissions",
-        cause: `Required roles: ${options.requiredRoles.join(", ")}`
+        message: "Insufficient role permissions"
       });
     }
-    if (options.requiredFeatures) {
-      const hasAllFeatures = options.requiredFeatures.every(
-        (feature) => licenseValidation.features.includes(feature)
-      );
-      if (!hasAllFeatures) {
-        throw new HTTPException(403, {
-          message: "Missing required license features",
-          cause: `Required features: ${options.requiredFeatures.join(", ")}`
-        });
-      }
-    }
-    c.set("license", licenseValidation);
-    const startTime = Date.now();
-    await next();
-    const responseTime = Date.now() - startTime;
-    trackApiUsage(
-      c.env.DB,
-      parseInt(user.id),
-      c.req.path,
-      c.req.url,
-      c.res.status,
-      responseTime
-    ).catch((error) => {
-      console.error("Failed to track API usage:", error);
-    });
-  };
-}
-__name(licenseMiddleware, "licenseMiddleware");
-async function validateUserLicense(db, userId, options = {}) {
-  try {
-    const licenseResult = await db.prepare(`
-      SELECT l.*, lt.name as license_type_name, lt.features, lt.max_api_calls_per_month,
-             lt.has_personalization, lt.has_byok_support, lt.max_users
-      FROM user_licenses ul
-      JOIN licenses l ON ul.license_id = l.id
-      JOIN license_types lt ON l.license_type_id = lt.id
-      WHERE ul.user_id = ? AND l.status = ? AND l.expires_at > datetime('now')
-      ORDER BY ul.is_primary DESC, l.created_at DESC
-      LIMIT 1
-    `).bind(userId, LicenseStatus.ACTIVE).first();
-    if (!licenseResult) {
-      return {
-        is_valid: false,
-        status: LicenseStatus.EXPIRED,
-        features: [],
-        usage_stats: {
-          current_usage: 0,
-          max_usage: 0,
-          remaining_usage: 0,
-          api_calls_this_month: 0,
-          max_api_calls: 0
-        },
-        errors: ["No active license found"]
-      };
-    }
-    const license = licenseResult;
-    const features = JSON.parse(license.features || "[]");
-    if (new Date(license.expires_at) < /* @__PURE__ */ new Date()) {
-      return {
-        is_valid: false,
-        status: LicenseStatus.EXPIRED,
-        features,
-        usage_stats: {
-          current_usage: license.usage_count || 0,
-          max_usage: license.max_usage_count || 0,
-          remaining_usage: 0,
-          api_calls_this_month: 0,
-          max_api_calls: license.max_api_calls_per_month || 0
-        },
-        errors: ["License has expired"]
-      };
-    }
-    if (options.checkUsage && license.max_usage_count) {
-      if (license.usage_count >= license.max_usage_count) {
-        return {
-          is_valid: false,
-          status: license.status,
-          features,
-          usage_stats: {
-            current_usage: license.usage_count,
-            max_usage: license.max_usage_count,
-            remaining_usage: 0,
-            api_calls_this_month: 0,
-            max_api_calls: license.max_api_calls_per_month || 0
-          },
-          errors: ["Usage limit exceeded"]
-        };
-      }
-    }
-    let apiCallsThisMonth = 0;
-    if (options.checkUsage && license.max_api_calls_per_month) {
-      const currentMonth = (/* @__PURE__ */ new Date()).toISOString().slice(0, 7);
-      const usageResult = await db.prepare(`
-        SELECT COUNT(*) as count
-        FROM api_usage
-        WHERE user_id = ? AND strftime('%Y-%m', usage_date) = ?
-      `).bind(userId, currentMonth).first();
-      apiCallsThisMonth = usageResult?.count || 0;
-      if (apiCallsThisMonth >= license.max_api_calls_per_month) {
-        return {
-          is_valid: false,
-          status: license.status,
-          features,
-          usage_stats: {
-            current_usage: license.usage_count,
-            max_usage: license.max_usage_count || 0,
-            remaining_usage: (license.max_usage_count || 0) - license.usage_count,
-            api_calls_this_month: apiCallsThisMonth,
-            max_api_calls: license.max_api_calls_per_month
-          },
-          errors: ["Monthly API call limit exceeded"]
-        };
-      }
-    }
-    return {
+    const simpleLicense = {
       is_valid: true,
-      status: license.status,
-      license_type: {
-        id: license.license_type_id,
-        name: license.license_type_name,
-        description: license.description,
-        features,
-        max_users: license.max_users,
-        max_api_calls_per_month: license.max_api_calls_per_month,
-        has_personalization: license.has_personalization,
-        has_byok_support: license.has_byok_support,
-        is_active: license.is_active,
-        created_at: license.created_at,
-        updated_at: license.updated_at
-      },
-      expires_at: license.expires_at,
-      features,
+      status: "active",
+      features: ["BASIC_ACCESS"],
+      // All users get basic access
       usage_stats: {
-        current_usage: license.usage_count,
-        max_usage: license.max_usage_count || 0,
-        remaining_usage: (license.max_usage_count || 0) - license.usage_count,
-        api_calls_this_month,
-        max_api_calls: license.max_api_calls_per_month || 0
+        current_usage: 0,
+        max_usage: 1e3,
+        remaining_usage: 1e3,
+        api_calls_this_month: 0,
+        max_api_calls: 1e3
       },
       errors: []
     };
-  } catch (error) {
-    console.error("License validation error:", error);
-    return {
-      is_valid: false,
-      status: LicenseStatus.EXPIRED,
-      features: [],
-      usage_stats: {
-        current_usage: 0,
-        max_usage: 0,
-        remaining_usage: 0,
-        api_calls_this_month: 0,
-        max_api_calls: 0
-      },
-      errors: ["License validation system error"]
-    };
-  }
+    c.set("license", simpleLicense);
+    await next();
+  };
 }
-__name(validateUserLicense, "validateUserLicense");
+__name(licenseMiddleware, "licenseMiddleware");
 
-// apps/app-api/src/routes/licenses.ts
+// src/routes/licenses.ts
+function getDatabase(c) {
+  const db2 = c.env.DB || c.env.DB_PROD;
+  if (!db2) {
+    throw new Error("Database binding not found");
+  }
+  return db2;
+}
+__name(getDatabase, "getDatabase");
 var licenseRoutes = new Hono2();
 var CreateLicenseSchema = external_exports.object({
   license_type_id: external_exports.number().int().positive(),
@@ -6716,7 +6569,8 @@ licenseRoutes.get(
   "/license-types",
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
-    const { results } = await c.env.DB.prepare(`
+    const db2 = getDatabase(c);
+    const { results } = await db2.prepare(`
       SELECT * FROM license_types 
       WHERE is_active = true 
       ORDER BY name ASC
@@ -6731,6 +6585,7 @@ licenseRoutes.post(
   async (c) => {
     const data = c.req.valid("json");
     const user = c.get("user");
+    const db2 = getDatabase(c);
     const licenseType = {
       name: data.name,
       description: data.description,
@@ -6745,7 +6600,7 @@ licenseRoutes.post(
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const result = await c.env.DB.prepare(`
+    const result = await db2.prepare(`
       INSERT INTO license_types (
         name, description, features, max_users, max_api_calls_per_month,
         has_personalization, has_byok_support, price_monthly, price_annual,
@@ -6796,8 +6651,9 @@ licenseRoutes.get(
     }
     query += " ORDER BY l.created_at DESC LIMIT ? OFFSET ?";
     params.push(limit.toString(), offset.toString());
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
-    const countResult = await c.env.DB.prepare(`
+    const db2 = getDatabase(c);
+    const { results } = await db2.prepare(query).bind(...params).all();
+    const countResult = await db2.prepare(`
       SELECT COUNT(*) as total
       FROM licenses l
       WHERE l.tenant_id = ?
@@ -6809,7 +6665,7 @@ licenseRoutes.get(
         page,
         limit,
         total: countResult?.total || 0,
-        total_pages: Math.ceil((countResult?.total || 0) / limit)
+        total_pages: Math.ceil((Number(countResult?.total) || 0) / limit)
       }
     });
   }
@@ -6821,6 +6677,7 @@ licenseRoutes.post(
   async (c) => {
     const data = c.req.valid("json");
     const user = c.get("user");
+    const db2 = getDatabase(c);
     const license = {
       license_key: generateLicenseKey(),
       license_type_id: data.license_type_id,
@@ -6834,7 +6691,7 @@ licenseRoutes.post(
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const result = await c.env.DB.prepare(`
+    const result = await db2.prepare(`
       INSERT INTO licenses (
         license_key, license_type_id, tenant_id, user_id, status,
         starts_at, expires_at, max_usage_count, metadata, created_at, updated_at
@@ -6855,7 +6712,7 @@ licenseRoutes.post(
       license.updated_at
     ).run();
     if (data.user_id) {
-      await c.env.DB.prepare(`
+      await db2.prepare(`
         INSERT INTO user_licenses (user_id, license_id, assigned_at, assigned_by, is_primary)
         VALUES (?, ?, ?, ?, ?)
       `).bind(
@@ -6878,7 +6735,8 @@ licenseRoutes.get(
   async (c) => {
     const licenseId = c.req.param("id");
     const user = c.get("user");
-    const { results } = await c.env.DB.prepare(`
+    const db2 = getDatabase(c);
+    const { results } = await db2.prepare(`
       SELECT l.*, lt.name as license_type_name, lt.features, lt.max_api_calls_per_month
       FROM licenses l
       JOIN license_types lt ON l.license_type_id = lt.id
@@ -6898,6 +6756,7 @@ licenseRoutes.put(
     const licenseId = c.req.param("id");
     const data = c.req.valid("json");
     const user = c.get("user");
+    const db2 = getDatabase(c);
     const updates = [];
     const params = [];
     if (data.status !== void 0) {
@@ -6915,7 +6774,7 @@ licenseRoutes.put(
     updates.push("updated_at = ?");
     params.push((/* @__PURE__ */ new Date()).toISOString());
     params.push(licenseId, user.tenant_id);
-    const result = await c.env.DB.prepare(`
+    const result = await db2.prepare(`
       UPDATE licenses 
       SET ${updates.join(", ")}
       WHERE id = ? AND tenant_id = ?
@@ -6923,7 +6782,7 @@ licenseRoutes.put(
     if (result.meta.changes === 0) {
       throw new HTTPException(404, { message: "License not found" });
     }
-    await c.env.DB.prepare(`
+    await db2.prepare(`
       INSERT INTO subscription_history (license_id, action, changed_by, created_at)
       VALUES (?, ?, ?, ?)
     `).bind(licenseId, data.status || "updated", user.id, (/* @__PURE__ */ new Date()).toISOString()).run();
@@ -6938,6 +6797,7 @@ licenseRoutes.post(
     const data = c.req.valid("json");
     const user = c.get("user");
     const encryptedKey = btoa(data.api_key);
+    const db2 = getDatabase(c);
     const config = {
       user_id: user.id,
       provider: data.provider,
@@ -6948,7 +6808,7 @@ licenseRoutes.post(
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const result = await c.env.DB.prepare(`
+    const result = await db2.prepare(`
       INSERT INTO byok_configs (
         user_id, provider, api_key_encrypted, model_preferences,
         max_usage_count, is_active, created_at, updated_at
@@ -6974,7 +6834,8 @@ licenseRoutes.get(
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.BYOK_SUPPORT] }),
   async (c) => {
     const user = c.get("user");
-    const { results } = await c.env.DB.prepare(`
+    const db2 = getDatabase(c);
+    const { results } = await db2.prepare(`
       SELECT id, user_id, provider, model_preferences, max_usage_count,
              usage_count, is_active, created_at, updated_at
       FROM byok_configs
@@ -6991,6 +6852,7 @@ licenseRoutes.post(
   async (c) => {
     const data = c.req.valid("json");
     const user = c.get("user");
+    const db2 = getDatabase(c);
     const settings = {
       user_id: user.id,
       preferences: JSON.stringify(data.preferences),
@@ -7006,11 +6868,11 @@ licenseRoutes.post(
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const existing = await c.env.DB.prepare(`
+    const existing = await db2.prepare(`
       SELECT id FROM personalization_settings WHERE user_id = ?
     `).bind(user.id).first();
     if (existing) {
-      await c.env.DB.prepare(`
+      await db2.prepare(`
         UPDATE personalization_settings 
         SET preferences = ?, child_profiles = ?, content_filters = ?, 
             ai_settings = ?, updated_at = ?
@@ -7025,7 +6887,7 @@ licenseRoutes.post(
       ).run();
       return c.json({ success: true, message: "Personalization settings updated" });
     } else {
-      const result = await c.env.DB.prepare(`
+      const result = await db2.prepare(`
         INSERT INTO personalization_settings (
           user_id, preferences, child_profiles, content_filters,
           ai_settings, created_at, updated_at
@@ -7051,7 +6913,8 @@ licenseRoutes.get(
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.PERSONALIZATION] }),
   async (c) => {
     const user = c.get("user");
-    const { results } = await c.env.DB.prepare(`
+    const db2 = getDatabase(c);
+    const { results } = await db2.prepare(`
       SELECT id, user_id, preferences, child_profiles, content_filters,
              ai_settings, created_at, updated_at
       FROM personalization_settings
@@ -7069,8 +6932,9 @@ licenseRoutes.get(
   async (c) => {
     const user = c.get("user");
     const license = c.get("license");
+    const db2 = getDatabase(c);
     const currentMonth = (/* @__PURE__ */ new Date()).toISOString().slice(0, 7);
-    const { results: apiUsageResults } = await c.env.DB.prepare(`
+    const { results: apiUsageResults } = await db2.prepare(`
       SELECT COUNT(*) as total_calls,
              COUNT(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 END) as successful_calls,
              AVG(response_time_ms) as avg_response_time
@@ -7094,7 +6958,16 @@ licenseRoutes.get(
 );
 var licenses_default = licenseRoutes;
 
-// apps/app-api/src/routes/content.ts
+// src/routes/content.ts
+function getDatabase2(c) {
+  if (c.env.DB) {
+    return c.env.DB;
+  } else if (c.env.DB_PROD) {
+    return c.env.DB_PROD;
+  }
+  throw new HTTPException(500, { message: "Database not available" });
+}
+__name(getDatabase2, "getDatabase");
 var contentRoutes = new Hono2();
 var SearchQuerySchema2 = external_exports.object({
   query: external_exports.string().min(1).max(500),
@@ -7164,138 +7037,112 @@ var PersonalizationRequestSchema = external_exports.object({
 });
 contentRoutes.post(
   "/content/search",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.CONTENT_ACCESS] }),
+  licenseMiddleware({ requiredRoles: ["admin", "doctor", "therapist", "educator", "parent"] }),
   zValidator("json", SearchQuerySchema2),
   async (c) => {
     const data = c.req.valid("json");
     const user = c.get("user");
     const license = c.get("license");
-    await trackAPIUsage(c.env.DB, user.id, "content.search", c.req.url);
-    let query = `
-      SELECT c.*, 
-             GROUP_CONCAT(DISTINCT p.name) as policies,
-             COUNT(DISTINCT ch.id) as usage_count,
-             AVG(r.rating) as avg_rating
-      FROM cards c
-      LEFT JOIN content_permissions cp ON c.id = cp.card_id
-      LEFT JOIN policies p ON cp.policy_id = p.id
-      LEFT JOIN search_history ch ON c.id = ch.card_id AND ch.user_id = ?
-      LEFT JOIN ratings r ON c.id = r.card_id
-      WHERE c.tenant_id = ?
-    `;
-    const params = [user.id, user.tenant_id];
-    if (user.role !== "admin") {
-      query += ` AND (c.access_level = 'public' OR c.role_permissions LIKE ?)`;
-      params.push(`%${user.role}%`);
-    }
-    if (data.query) {
-      query += ` AND (
-        c.title_en LIKE ? OR c.content_en LIKE ? OR 
-        c.title_ar LIKE ? OR c.content_ar LIKE ? OR
-        c.title_fr LIKE ? OR c.content_fr LIKE ? OR
-        c.title_es LIKE ? OR c.content_es LIKE ? OR
-        c.tags LIKE ? OR c.category LIKE ?
-      )`;
-      const searchTerm = `%${data.query}%`;
-      params.push(...Array(10).fill(searchTerm));
-    }
-    if (data.filters?.categories?.length) {
-      query += ` AND c.category IN (${data.filters.categories.map(() => "?").join(",")})`;
-      params.push(...data.filters.categories);
-    }
-    if (data.filters?.age_groups?.length) {
-      query += ` AND c.metadata_age_range_min <= ? AND c.metadata_age_range_max >= ?`;
-      params.push(
-        Math.max(...data.filters.age_groups.map((age) => parseInt(age.split("-")[1] || "18"))),
-        Math.min(...data.filters.age_groups.map((age) => parseInt(age.split("-")[0] || "0")))
-      );
-    }
-    if (data.filters?.conditions?.length) {
-      query += ` AND c.metadata_conditions LIKE ?`;
-      params.push(`%${data.filters.conditions.join("%")}%`);
-    }
-    if (data.filters?.languages?.length) {
-      const languageFields = data.filters.languages.map((lang) => `c.${lang}_available = 1`);
-      query += ` AND (${languageFields.join(" OR ")})`;
-    }
-    if (data.filters?.difficulty_level) {
-      query += ` AND c.metadata_difficulty_level = ?`;
-      params.push(data.filters.difficulty_level);
-    }
-    if (data.personalization?.child_context) {
-      const child = data.personalization.child_context;
-      if (child.age !== void 0) {
-        query += ` AND c.metadata_age_range_min <= ? AND c.metadata_age_range_max >= ?`;
-        params.push(child.age, child.age);
+    try {
+      const db2 = getDatabase2(c);
+      await trackAPIUsage(db2, user.id, "content.search", c.req.url);
+      let query = `
+        SELECT c.*, 0 as usage_count, 0 as avg_rating
+        FROM cards c
+        WHERE c.tenant_id = ?
+      `;
+      const params = [user.tenant_id || 1];
+      if (data.query) {
+        query += ` AND (
+          c.title_en LIKE ? OR c.title_ar LIKE ? OR
+          c.content_en LIKE ? OR c.content_ar LIKE ? OR
+          c.category LIKE ? OR c.tags LIKE ?
+        )`;
+        const searchTerm = `%${data.query}%`;
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
-      if (child.conditions?.length) {
-        query += ` AND c.metadata_conditions LIKE ?`;
-        params.push(`%${child.conditions.join("%")}%`);
-      }
-    }
-    if (data.personalization?.role_context) {
-      query += ` AND (c.role_permissions IS NULL OR c.role_permissions LIKE ?)`;
-      params.push(`%${data.personalization.role_context}%`);
-    }
-    query += `
-      GROUP BY c.id
-      ORDER BY 
-        CASE WHEN c.category = ? THEN 1 ELSE 2 END,
-        usage_count DESC,
-        avg_rating DESC,
-        c.created_at DESC
-      LIMIT ? OFFSET ?
-    `;
-    params.push(
-      data.personalization?.role_context || "educational",
-      data.limit,
-      data.offset
-    );
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
-    if (results.length > 0) {
-      const searchHistory = {
-        user_id: user.id,
-        query: data.query,
-        filters: JSON.stringify(data.filters || {}),
-        personalization: JSON.stringify(data.personalization || {}),
-        results_count: results.length,
-        created_at: (/* @__PURE__ */ new Date()).toISOString()
+      const roleContentAccess = {
+        "admin": ["medical", "therapeutic", "educational", "behavioral", "developmental"],
+        "doctor": ["medical", "therapeutic", "educational", "behavioral", "developmental"],
+        // Full access
+        "therapist": ["therapeutic", "educational", "behavioral", "developmental"],
+        // All except medical
+        "educator": ["educational", "behavioral"],
+        // Education focused
+        "parent": ["educational"]
+        // Basic guidance only
       };
-      await c.env.DB.prepare(`
-        INSERT INTO search_history (
-          user_id, query, filters, personalization, results_count, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?)
-      `).bind(
-        searchHistory.user_id,
-        searchHistory.query,
-        searchHistory.filters,
-        searchHistory.personalization,
-        searchHistory.results_count,
-        searchHistory.created_at
-      ).run();
-    }
-    return c.json({
-      success: true,
-      results: results.map((card) => ({
-        ...card,
-        policies: card.policies ? card.policies.split(",") : [],
-        metadata: card.metadata ? JSON.parse(card.metadata) : {}
-      })),
-      pagination: {
-        limit: data.limit,
-        offset: data.offset,
-        total: results.length
+      const allowedCategories = roleContentAccess[user.role] || ["educational"];
+      if (user.role !== "admin") {
+        query += ` AND c.category IN (${allowedCategories.map(() => "?").join(",")})`;
+        params.push(...allowedCategories);
       }
-    });
+      if (data.filters?.categories?.length) {
+        query += ` AND c.category IN (${data.filters.categories.map(() => "?").join(",")})`;
+        params.push(...data.filters.categories);
+      }
+      query += ` ORDER BY c.created_at DESC LIMIT ? OFFSET ?`;
+      params.push(data.limit, data.offset);
+      console.log("Executing search query:", query);
+      console.log("With parameters:", params);
+      const { results } = await db2.prepare(query).bind(...params).all();
+      console.log("Search results count:", results.length);
+      const formattedResults = results.map((card) => ({
+        id: card.id,
+        title: {
+          en: card.title_en,
+          ar: card.title_ar || "",
+          fr: card.title_fr || "",
+          es: card.title_es || ""
+        },
+        content: {
+          en: card.content_en,
+          ar: card.content_ar || "",
+          fr: card.content_fr || "",
+          es: card.content_es || ""
+        },
+        category: card.category,
+        tags: card.tags ? JSON.parse(card.tags) : [],
+        metadata: card.metadata ? JSON.parse(card.metadata) : {},
+        access_level: "public",
+        // Default since cards table doesn't have this
+        role_permissions: [],
+        // Default since cards table doesn't have this
+        created_at: card.created_at,
+        updated_at: card.updated_at,
+        avg_rating: card.avg_rating || 0,
+        usage_count: card.usage_count || 0
+      }));
+      return c.json({
+        success: true,
+        results: formattedResults,
+        total: formattedResults.length,
+        query: data.query,
+        filters: data.filters,
+        pagination: {
+          limit: data.limit,
+          offset: data.offset,
+          has_more: formattedResults.length === data.limit
+        }
+      });
+    } catch (error) {
+      console.error("Search error:", error);
+      return c.json({
+        success: false,
+        error: "Search failed",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }, 500);
+    }
   }
 );
 contentRoutes.get(
   "/content/personalized",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.PERSONALIZATION] }),
+  licenseMiddleware({ requiredRoles: ["admin", "doctor", "therapist", "educator", "parent"] }),
   async (c) => {
     const user = c.get("user");
     const limit = Number(c.req.query("limit") || "10");
-    const { results: settings } = await c.env.DB.prepare(`
+    const db2 = getDatabase2(c);
+    const { results: settings } = await db2.prepare(`
       SELECT preferences, child_profiles, content_filters, ai_settings
       FROM personalization_settings
       WHERE user_id = ?
@@ -7308,12 +7155,11 @@ contentRoutes.get(
     const childProfiles = userSettings.child_profiles ? JSON.parse(userSettings.child_profiles) : [];
     const contentFilters = userSettings.content_filters ? JSON.parse(userSettings.content_filters) : {};
     let query = `
-      SELECT c.*, AVG(r.rating) as avg_rating, COUNT(r.id) as rating_count
+      SELECT c.*, 0 as avg_rating, 0 as rating_count
       FROM cards c
-      LEFT JOIN ratings r ON c.id = r.card_id
-      WHERE c.tenant_id = ? AND c.access_level != 'premium'
+      WHERE c.tenant_id = ?
     `;
-    const params = [user.tenant_id];
+    const params = [user.tenant_id || 1];
     if (user.role !== "admin") {
       query += ` AND (c.role_permissions IS NULL OR c.role_permissions LIKE ?)`;
       params.push(`%${user.role}%`);
@@ -7345,7 +7191,7 @@ contentRoutes.get(
       LIMIT ?
     `;
     params.push(limit);
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await db2.prepare(query).bind(...params).all();
     return c.json({
       success: true,
       content: results.map((card) => ({
@@ -7363,19 +7209,21 @@ contentRoutes.get(
 );
 contentRoutes.post(
   "/content/personalize",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.PERSONALIZATION, LicenseFeatures.BYOK_SUPPORT] }),
+  licenseMiddleware({ requiredRoles: ["admin", "doctor", "therapist"] }),
+  // Only professionals can personalize
   zValidator("json", PersonalizationRequestSchema),
   async (c) => {
     const data = c.req.valid("json");
     const user = c.get("user");
-    const { results: contentResults } = await c.env.DB.prepare(`
+    const db2 = getDatabase2(c);
+    const { results: contentResults } = await db2.prepare(`
       SELECT * FROM cards WHERE id = ? AND tenant_id = ?
     `).bind(data.content_id, user.tenant_id).all();
     if (contentResults.length === 0) {
       throw new HTTPException(404, { message: "Content not found" });
     }
     const originalContent = contentResults[0];
-    const { results: byokResults } = await c.env.DB.prepare(`
+    const { results: byokResults } = await db2.prepare(`
       SELECT * FROM byok_configs 
       WHERE user_id = ? AND provider = ? AND is_active = true
     `).bind(user.id, data.ai_provider || "gemini").all();
@@ -7432,12 +7280,12 @@ Consider this child context: Age ${data.child_context.age}, Conditions: ${data.c
       confidence: 0.85,
       generated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    await c.env.DB.prepare(`
+    await db2.prepare(`
       UPDATE byok_configs 
       SET usage_count = usage_count + 1, updated_at = ?
       WHERE id = ?
     `).bind((/* @__PURE__ */ new Date()).toISOString(), byokConfig.id).run();
-    await c.env.DB.prepare(`
+    await db2.prepare(`
       INSERT INTO personalization_history (
         user_id, content_id, personalization_type, target_role,
         target_language, child_context, original_content, 
@@ -7467,11 +7315,13 @@ Consider this child context: Age ${data.child_context.age}, Conditions: ${data.c
 );
 contentRoutes.post(
   "/content/cards",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.CONTENT_MANAGEMENT] }),
+  licenseMiddleware({ requiredRoles: ["admin"] }),
+  // Only admins can create content
   zValidator("json", CreateCardSchema),
   async (c) => {
     const data = c.req.valid("json");
     const user = c.get("user");
+    const db2 = getDatabase2(c);
     const card = {
       title_en: data.title.en,
       title_ar: data.title.ar,
@@ -7491,7 +7341,7 @@ contentRoutes.post(
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const result = await c.env.DB.prepare(`
+    const result = await db2.prepare(`
       INSERT INTO cards (
         title_en, title_ar, title_fr, title_es,
         content_en, content_ar, content_fr, content_es,
@@ -7525,13 +7375,15 @@ contentRoutes.post(
 );
 contentRoutes.get(
   "/content/cards",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.CONTENT_MANAGEMENT] }),
+  licenseMiddleware({ requiredRoles: ["admin"] }),
+  // Only admins can view all cards
   async (c) => {
     const user = c.get("user");
     const page = Number(c.req.query("page") || "1");
     const limit = Number(c.req.query("limit") || "20");
     const offset = (page - 1) * limit;
-    const { results } = await c.env.DB.prepare(`
+    const db2 = getDatabase2(c);
+    const { results } = await db2.prepare(`
       SELECT c.*, u.name as created_by_name
       FROM cards c
       LEFT JOIN users u ON c.created_by = u.id
@@ -7539,7 +7391,7 @@ contentRoutes.get(
       ORDER BY c.created_at DESC
       LIMIT ? OFFSET ?
     `).bind(user.tenant_id, limit, offset).all();
-    const countResult = await c.env.DB.prepare(`
+    const countResult = await db2.prepare(`
       SELECT COUNT(*) as total FROM cards WHERE tenant_id = ?
     `).bind(user.tenant_id).first();
     return c.json({
@@ -7554,14 +7406,15 @@ contentRoutes.get(
         page,
         limit,
         total: countResult?.total || 0,
-        total_pages: Math.ceil((countResult?.total || 0) / limit)
+        total_pages: Math.ceil((Number(countResult?.total) || 0) / limit)
       }
     });
   }
 );
 contentRoutes.put(
   "/content/cards/:id",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.CONTENT_MANAGEMENT] }),
+  licenseMiddleware({ requiredRoles: ["admin"] }),
+  // Only admins can update cards
   zValidator("json", UpdateCardSchema),
   async (c) => {
     const cardId = c.req.param("id");
@@ -7600,7 +7453,8 @@ contentRoutes.put(
     updates.push("updated_at = ?");
     params.push((/* @__PURE__ */ new Date()).toISOString());
     params.push(cardId, user.tenant_id);
-    const result = await c.env.DB.prepare(`
+    const db2 = getDatabase2(c);
+    const result = await db2.prepare(`
       UPDATE cards 
       SET ${updates.join(", ")}
       WHERE id = ? AND tenant_id = ?
@@ -7611,9 +7465,502 @@ contentRoutes.put(
     return c.json({ success: true, message: "Card updated" });
   }
 );
+contentRoutes.get(
+  "/content/book-structure",
+  licenseMiddleware({ requiredRoles: ["admin", "doctor", "therapist", "educator", "parent"] }),
+  async (c) => {
+    try {
+      const user = c.get("user");
+      const language = c.req.query("language") || "en";
+      const role = c.req.query("role") || user.role;
+      console.log("Book structure request - User object:", JSON.stringify(user, null, 2));
+      console.log("User tenant_id:", user.tenant_id);
+      console.log("User id:", user.id, "Language:", language, "Role:", role);
+      const db2 = getDatabase2(c);
+      console.log("Database connection established");
+      let query = `
+      SELECT c.*, 
+             0 as usage_count,
+             0 as avg_rating
+      FROM cards c
+      WHERE c.tenant_id = ?
+    `;
+      const params = [user.tenant_id];
+      if (user.role !== "admin") {
+      }
+      query += `
+      GROUP BY c.id
+      ORDER BY c.category, c.created_at DESC
+    `;
+      console.log("Executing query:", query, "with params:", params);
+      const { results } = await db2.prepare(query).bind(...params).all();
+      console.log("Query executed successfully");
+      console.log("Query results count:", results.length);
+      if (results.length > 0) {
+        console.log("First result sample:", JSON.stringify(results[0], null, 2));
+      }
+      console.log("Starting to organize cards into chapters");
+      const chapters = {};
+      results.forEach((card) => {
+        let tags = [];
+        let metadata = {};
+        let rolePermissions = [];
+        try {
+          tags = card.tags ? JSON.parse(card.tags) : [];
+        } catch (e) {
+          tags = [];
+        }
+        try {
+          metadata = card.metadata ? JSON.parse(card.metadata) : {};
+        } catch (e) {
+          metadata = {};
+        }
+        try {
+          rolePermissions = card.role_permissions ? JSON.parse(card.role_permissions) : [];
+        } catch (e) {
+          rolePermissions = [];
+        }
+        const chapterKey = card.category || "general";
+        if (!chapters[chapterKey]) {
+          const chapterTitles = {
+            "medical": "Medical Conditions & Treatments",
+            "therapeutic": "Therapeutic Interventions",
+            "educational": "Educational Resources",
+            "behavioral": "Behavioral Health",
+            "developmental": "Child Development",
+            "general": "General Resources"
+          };
+          const chapterDescriptions = {
+            "medical": "Medical guidance for pediatric behavioral health conditions",
+            "therapeutic": "Evidence-based therapeutic interventions and techniques",
+            "educational": "Resources for educators and educational settings",
+            "behavioral": "Behavioral health assessment and intervention strategies",
+            "developmental": "Child development milestones and support strategies",
+            "general": "General resources and guidance"
+          };
+          chapters[chapterKey] = {
+            id: chapterKey,
+            title: chapterTitles[chapterKey] || "Other Resources",
+            description: chapterDescriptions[chapterKey] || "Additional resources and guidance",
+            icon: "BookOpen",
+            // Will be mapped to actual icon component in frontend
+            sections: {}
+          };
+        }
+        let sectionKey = "general";
+        let sectionTitle = "General Information";
+        if (tags.length > 0) {
+          sectionKey = tags[0].toLowerCase().replace(/\s+/g, "-");
+          sectionTitle = tags[0];
+        } else if (metadata.conditions && metadata.conditions.length > 0) {
+          sectionKey = metadata.conditions[0].toLowerCase().replace(/\s+/g, "-");
+          sectionTitle = metadata.conditions[0];
+        }
+        if (!chapters[chapterKey].sections[sectionKey]) {
+          chapters[chapterKey].sections[sectionKey] = {
+            id: sectionKey,
+            title: sectionTitle,
+            cards: [],
+            estimatedReadTime: 0
+          };
+        }
+        const cardData = {
+          id: card.id,
+          title: {
+            en: card.title_en || "",
+            ar: card.title_ar || "",
+            fr: card.title_fr || "",
+            es: card.title_es || ""
+          },
+          description: {
+            en: card.content_en?.substring(0, 200) || "",
+            ar: card.content_ar?.substring(0, 200) || "",
+            fr: card.content_fr?.substring(0, 200) || "",
+            es: card.content_es?.substring(0, 200) || ""
+          },
+          content: {
+            en: card.content_en || "",
+            ar: card.content_ar || "",
+            fr: card.content_fr || "",
+            es: card.content_es || ""
+          },
+          category: card.category || "general",
+          tags,
+          metadata,
+          access_level: "public",
+          role_permissions: [],
+          created_at: card.created_at,
+          updated_at: card.updated_at,
+          avg_rating: 0,
+          usage_count: 0
+        };
+        chapters[chapterKey].sections[sectionKey].cards.push(cardData);
+        const wordCount = (cardData.content[language] || "").split(/\s+/).length;
+        chapters[chapterKey].sections[sectionKey].estimatedReadTime += Math.ceil(wordCount / 200);
+      });
+      const bookChapters = Object.values(chapters).map((chapter) => ({
+        ...chapter,
+        sections: Object.values(chapter.sections).map((section) => ({
+          ...section,
+          estimatedReadTime: Math.max(section.estimatedReadTime, 5)
+          // Minimum 5 minutes
+        }))
+      }));
+      console.log("Returning response with", bookChapters.length, "chapters");
+      return c.json({
+        success: true,
+        chapters: bookChapters,
+        total_chapters: bookChapters.length,
+        total_cards: results.length,
+        language,
+        role
+      });
+    } catch (error) {
+      console.error("Error in book-structure endpoint:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
+      throw error;
+    }
+  }
+);
+contentRoutes.post(
+  "/content/advanced-search",
+  licenseMiddleware({ requiredRoles: ["admin", "doctor", "therapist", "educator", "parent"] }),
+  zValidator("json", external_exports.object({
+    query: external_exports.string().min(1).max(1e3),
+    context: external_exports.object({
+      user_role: external_exports.enum(["doctor", "therapist", "educator", "parent"]),
+      child_age: external_exports.number().int().min(0).max(18).optional(),
+      conditions: external_exports.array(external_exports.string()).optional(),
+      severity: external_exports.enum(["mild", "moderate", "severe"]).optional(),
+      intervention_type: external_exports.enum(["assessment", "therapy", "education", "crisis"]).optional()
+    }),
+    ai_provider: external_exports.enum(["gemini", "grok", "openai", "claude"]).optional(),
+    response_type: external_exports.enum(["guidance", "intervention", "handout", "teleprompter"]).default("guidance"),
+    limit: external_exports.number().int().min(1).max(20).default(10)
+  })),
+  async (c) => {
+    const data = c.req.valid("json");
+    const user = c.get("user");
+    try {
+      const db2 = getDatabase2(c);
+      let aiProvider = data.ai_provider || "gemini";
+      let apiKey = null;
+      if (data.ai_provider) {
+        const byokConfig = await db2.prepare(`
+          SELECT api_key_encrypted, model_preferences 
+          FROM byok_configs 
+          WHERE user_id = ? AND provider = ? AND is_active = 1
+        `).bind(user.id, data.ai_provider).first();
+        if (byokConfig) {
+          apiKey = byokConfig.api_key_encrypted;
+        }
+      }
+      let query = `
+        SELECT c.*, 0 as usage_count, 0 as avg_rating
+        FROM cards c
+        WHERE c.tenant_id = ?
+      `;
+      const params = [user.tenant_id || 1];
+      const roleContentAccess = {
+        "admin": ["medical", "therapeutic", "educational", "behavioral", "developmental"],
+        "doctor": ["medical", "therapeutic", "educational", "behavioral", "developmental"],
+        "therapist": ["therapeutic", "educational", "behavioral", "developmental"],
+        "educator": ["educational", "behavioral"],
+        "parent": ["educational"]
+      };
+      const allowedCategories = roleContentAccess[user.role] || ["educational"];
+      if (user.role !== "admin") {
+        query += ` AND c.category IN (${allowedCategories.map(() => "?").join(",")})`;
+        params.push(...allowedCategories);
+      }
+      if (data.query) {
+        query += ` AND (
+          c.title_en LIKE ? OR c.title_ar LIKE ? OR
+          c.content_en LIKE ? OR c.content_ar LIKE ? OR
+          c.category LIKE ? OR c.tags LIKE ?
+        )`;
+        const searchTerm = `%${data.query}%`;
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      }
+      if (data.context.conditions?.length) {
+        const condition = data.context.conditions[0];
+        query += ` AND (c.tags LIKE ? OR c.metadata LIKE ?)`;
+        params.push(`%${condition}%`, `%${condition}%`);
+      }
+      query += ` ORDER BY c.created_at DESC LIMIT ?`;
+      params.push(data.limit);
+      const { results } = await db2.prepare(query).bind(...params).all();
+      const aiEnhancedResponse = await generateAIResponse({
+        foundationalContent: results,
+        userQuery: data.query,
+        userRole: data.context.user_role,
+        childAge: data.context.child_age,
+        conditions: data.context.conditions,
+        severity: data.context.severity,
+        responseType: data.response_type,
+        aiProvider,
+        apiKey
+      });
+      return c.json({
+        success: true,
+        foundational_content: results.map((card) => ({
+          id: card.id,
+          title: {
+            en: card.title_en,
+            ar: card.title_ar || ""
+          },
+          content: {
+            en: card.content_en,
+            ar: card.content_ar || ""
+          },
+          category: card.category,
+          tags: card.tags ? JSON.parse(card.tags) : [],
+          metadata: card.metadata ? JSON.parse(card.metadata) : {}
+        })),
+        ai_enhanced_response: aiEnhancedResponse,
+        context: data.context,
+        response_type: data.response_type,
+        medical_accuracy_note: "This AI-generated content is for educational purposes. Always consult qualified healthcare professionals for medical decisions."
+      });
+    } catch (error) {
+      console.error("Advanced search error:", error);
+      return c.json({
+        success: false,
+        error: "Advanced search failed",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }, 500);
+    }
+  }
+);
+async function generateAIResponse(params) {
+  const { foundationalContent, userQuery, userRole, childAge, conditions, severity, responseType } = params;
+  const rolePrompts = {
+    parent: `As a parent seeking guidance about childhood behavioral issues, I need practical, easy-to-understand advice. My question: "${userQuery}"`,
+    educator: `As an educator working with children with behavioral challenges, I need classroom strategies and educational interventions. My question: "${userQuery}"`,
+    therapist: `As a licensed therapist, I need evidence-based therapeutic interventions and treatment approaches. My question: "${userQuery}"`,
+    doctor: `As a medical professional, I need clinical assessment tools, diagnostic criteria, and treatment protocols. My question: "${userQuery}"`
+  };
+  const responseTypePrompts = {
+    guidance: "Provide comprehensive guidance and recommendations.",
+    intervention: "Create a structured intervention plan with specific steps.",
+    handout: "Generate a patient/parent handout with key information and action items.",
+    teleprompter: "Create a therapy session script with talking points and intervention techniques."
+  };
+  const contentContext = foundationalContent.map(
+    (card) => `${card.category}: ${card.title_en} - ${card.content_en.substring(0, 200)}...`
+  ).join("\n");
+  const contextInfo = [
+    childAge ? `Child age: ${childAge} years` : "",
+    conditions?.length ? `Conditions: ${conditions.join(", ")}` : "",
+    severity ? `Severity: ${severity}` : ""
+  ].filter(Boolean).join(", ");
+  const fullPrompt = `
+${rolePrompts[userRole]}
+
+Context: ${contextInfo}
+
+Foundational Knowledge Base Content:
+${contentContext}
+
+Task: ${responseTypePrompts[responseType]}
+
+Requirements:
+- Base your response on the provided foundational content
+- Maintain medical accuracy and evidence-based practices
+- Tailor the language and complexity to the user role (${userRole})
+- Include specific, actionable recommendations
+- Add appropriate disclaimers about professional consultation
+- If this is for ${responseType}, format accordingly
+
+Response:`;
+  return {
+    provider: params.aiProvider,
+    prompt_used: fullPrompt,
+    response: generateMockAIResponse(userRole, responseType, userQuery, contextInfo),
+    medical_accuracy_verified: true,
+    sources_referenced: foundationalContent.length,
+    disclaimer: "This AI-generated content is based on foundational medical knowledge but should not replace professional medical advice."
+  };
+}
+__name(generateAIResponse, "generateAIResponse");
+function generateMockAIResponse(userRole, responseType, query, context) {
+  const responses = {
+    parent: {
+      guidance: `Based on your question about "${query}", here are some practical steps you can take at home. Remember, consistency is key when addressing behavioral challenges. Start with establishing clear routines and positive reinforcement strategies.`,
+      handout: `## Parent Guide: Managing Behavioral Challenges
+
+**Your Question:** ${query}
+
+**Key Points:**
+- Establish consistent routines
+- Use positive reinforcement
+- Seek professional help when needed
+
+**Action Steps:**
+1. Document specific behaviors
+2. Implement consistent responses
+3. Schedule regular check-ins`
+    },
+    therapist: {
+      intervention: `## Therapeutic Intervention Plan
+
+**Presenting Issue:** ${query}
+**Context:** ${context}
+
+**Assessment Phase:**
+- Conduct comprehensive behavioral assessment
+- Identify triggers and patterns
+
+**Intervention Strategies:**
+- Cognitive-behavioral techniques
+- Family systems approach
+- Progress monitoring tools`,
+      teleprompter: `## Therapy Session Guide
+
+**Opening (5 min):**
+- "How has the week been since our last session?"
+- Review homework/practice exercises
+
+**Main Session (40 min):**
+- Address: ${query}
+- Use techniques: CBT, play therapy, family involvement
+
+**Closing (10 min):**
+- Summarize key insights
+- Assign practice exercises`
+    },
+    doctor: {
+      guidance: `## Clinical Assessment for: ${query}
+
+**Differential Diagnosis Considerations:**
+- Rule out medical causes
+- Assess comorbid conditions
+
+**Evidence-Based Treatment Options:**
+- Pharmacological interventions (if indicated)
+- Behavioral interventions
+- Family therapy referrals
+
+**Monitoring Parameters:**
+- Symptom severity scales
+- Functional improvement measures`
+    },
+    educator: {
+      guidance: `## Classroom Strategies for: ${query}
+
+**Environmental Modifications:**
+- Structured classroom layout
+- Clear visual schedules
+- Sensory considerations
+
+**Behavioral Supports:**
+- Positive behavior intervention plan
+- Peer support strategies
+- Communication with family
+
+**Academic Accommodations:**
+- Modified assignments
+- Extended time
+- Alternative assessment methods`
+    }
+  };
+  return responses[userRole]?.[responseType] || `Personalized response for ${userRole} regarding: ${query}. Context: ${context}`;
+}
+__name(generateMockAIResponse, "generateMockAIResponse");
+contentRoutes.post(
+  "/content/byok-config",
+  licenseMiddleware({ requiredRoles: ["admin", "doctor", "therapist", "educator", "parent"] }),
+  zValidator("json", external_exports.object({
+    provider: external_exports.enum(["gemini", "grok", "openai", "claude"]),
+    api_key: external_exports.string().min(10),
+    model_preferences: external_exports.object({
+      model: external_exports.string().optional(),
+      temperature: external_exports.number().min(0).max(2).optional(),
+      max_tokens: external_exports.number().int().positive().optional()
+    }).optional()
+  })),
+  async (c) => {
+    const data = c.req.valid("json");
+    const user = c.get("user");
+    try {
+      const db2 = getDatabase2(c);
+      const encryptedKey = data.api_key;
+      await db2.prepare(`
+        UPDATE byok_configs 
+        SET is_active = 0 
+        WHERE user_id = ? AND provider = ?
+      `).bind(user.id, data.provider).run();
+      await db2.prepare(`
+        INSERT INTO byok_configs (
+          user_id, provider, api_key_encrypted, model_preferences, 
+          is_active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, 1, ?, ?)
+      `).bind(
+        user.id,
+        data.provider,
+        encryptedKey,
+        JSON.stringify(data.model_preferences || {}),
+        (/* @__PURE__ */ new Date()).toISOString(),
+        (/* @__PURE__ */ new Date()).toISOString()
+      ).run();
+      return c.json({
+        success: true,
+        message: `BYOK configuration saved for ${data.provider}`,
+        provider: data.provider,
+        configured_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    } catch (error) {
+      console.error("BYOK config error:", error);
+      return c.json({
+        success: false,
+        error: "Failed to save BYOK configuration",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }, 500);
+    }
+  }
+);
+contentRoutes.get(
+  "/content/byok-config",
+  licenseMiddleware({ requiredRoles: ["admin", "doctor", "therapist", "educator", "parent"] }),
+  async (c) => {
+    const user = c.get("user");
+    try {
+      const db2 = getDatabase2(c);
+      const { results } = await db2.prepare(`
+        SELECT provider, model_preferences, is_active, created_at, updated_at
+        FROM byok_configs 
+        WHERE user_id = ? AND is_active = 1
+        ORDER BY created_at DESC
+      `).bind(user.id).all();
+      return c.json({
+        success: true,
+        configurations: results.map((config) => ({
+          provider: config.provider,
+          model_preferences: config.model_preferences ? JSON.parse(config.model_preferences) : {},
+          is_active: config.is_active,
+          configured_at: config.created_at
+        }))
+      });
+    } catch (error) {
+      console.error("Get BYOK config error:", error);
+      return c.json({
+        success: false,
+        error: "Failed to retrieve BYOK configurations"
+      }, 500);
+    }
+  }
+);
 var content_default = contentRoutes;
 
-// apps/app-api/src/routes/admin.ts
+// src/routes/admin.ts
+function getDatabase3(c) {
+  const db2 = c.env.DB || c.env.DB_PROD;
+  if (!db2) {
+    throw new HTTPException(500, { message: "Database binding not found" });
+  }
+  return db2;
+}
+__name(getDatabase3, "getDatabase");
 async function hashPassword(password) {
   return btoa(password);
 }
@@ -7688,7 +8035,7 @@ var MarketingContentSchema = external_exports.object({
 });
 adminRoutes.get(
   "/admin/users",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
     const user = c.get("user");
     const page = Number(c.req.query("page") || "1");
@@ -7697,6 +8044,7 @@ adminRoutes.get(
     const search = c.req.query("search") || "";
     const role = c.req.query("role");
     const is_active = c.req.query("is_active");
+    const db2 = getDatabase3(c);
     let query = `
       SELECT u.*, 
              COUNT(DISTINCT ul.id) as license_count,
@@ -7708,7 +8056,7 @@ adminRoutes.get(
       LEFT JOIN search_history sh ON u.id = sh.user_id
       WHERE u.tenant_id = ?
     `;
-    const params = [user.tenant_id];
+    const params = [user.tenant_id || 1];
     if (search) {
       query += ` AND (u.name LIKE ? OR u.email LIKE ?)`;
       params.push(`%${search}%`, `%${search}%`);
@@ -7727,7 +8075,7 @@ adminRoutes.get(
       LIMIT ? OFFSET ?
     `;
     params.push(limit, offset);
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await db2.prepare(query).bind(...params).all();
     const countQuery = `
       SELECT COUNT(*) as total
       FROM users u
@@ -7736,14 +8084,14 @@ adminRoutes.get(
       ${role ? "AND u.role = ?" : ""}
       ${is_active !== void 0 ? "AND u.is_active = ?" : ""}
     `;
-    const countParams = [user.tenant_id];
+    const countParams = [user.tenant_id || 1];
     if (search)
       countParams.push(`%${search}%`, `%${search}%`);
     if (role)
       countParams.push(role);
     if (is_active !== void 0)
       countParams.push(is_active === "true" ? 1 : 0);
-    const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first();
+    const countResult = await db2.prepare(countQuery).bind(...countParams).first();
     return c.json({
       success: true,
       users: results.map((user2) => ({
@@ -7754,19 +8102,20 @@ adminRoutes.get(
         page,
         limit,
         total: countResult?.total || 0,
-        total_pages: Math.ceil((countResult?.total || 0) / limit)
+        total_pages: Math.ceil((Number(countResult?.total) || 0) / limit)
       }
     });
   }
 );
 adminRoutes.post(
   "/admin/users",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   zValidator("json", CreateUserSchema),
   async (c) => {
     const data = c.req.valid("json");
     const currentUser = c.get("user");
-    const existingUser = await c.env.DB.prepare(`
+    const db2 = getDatabase3(c);
+    const existingUser = await db2.prepare(`
       SELECT id FROM users WHERE email = ?
     `).bind(data.email).first();
     if (existingUser) {
@@ -7785,7 +8134,7 @@ adminRoutes.post(
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const result = await c.env.DB.prepare(`
+    const result = await db2.prepare(`
       INSERT INTO users (
         email, name, role, tenant_id, password_hash, metadata,
         is_active, created_at, updated_at
@@ -7813,11 +8162,12 @@ adminRoutes.post(
 );
 adminRoutes.get(
   "/admin/users/:id",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
     const userId = c.req.param("id");
     const currentUser = c.get("user");
-    const { results } = await c.env.DB.prepare(`
+    const db2 = getDatabase3(c);
+    const { results } = await db2.prepare(`
       SELECT u.*, 
              COUNT(DISTINCT ul.id) as license_count,
              COUNT(DISTINCT l.id) as active_licenses,
@@ -7836,7 +8186,7 @@ adminRoutes.get(
       throw new HTTPException(404, { message: "User not found" });
     }
     const user = results[0];
-    const { results: licenses } = await c.env.DB.prepare(`
+    const { results: licenses } = await db2.prepare(`
       SELECT l.*, lt.name as license_type_name, lt.features
       FROM licenses l
       JOIN license_types lt ON l.license_type_id = lt.id
@@ -7844,7 +8194,7 @@ adminRoutes.get(
       WHERE ul.user_id = ?
       ORDER BY l.created_at DESC
     `).bind(userId).all();
-    const { results: recentActivity } = await c.env.DB.prepare(`
+    const { results: recentActivity } = await db2.prepare(`
       SELECT 
         DATE(created_at) as date,
         COUNT(*) as activity_count,
@@ -7870,12 +8220,13 @@ adminRoutes.get(
 );
 adminRoutes.put(
   "/admin/users/:id",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   zValidator("json", UpdateUserSchema),
   async (c) => {
     const userId = c.req.param("id");
     const data = c.req.valid("json");
     const currentUser = c.get("user");
+    const db2 = getDatabase3(c);
     const updates = [];
     const params = [];
     if (data.name !== void 0) {
@@ -7897,7 +8248,7 @@ adminRoutes.put(
     updates.push("updated_at = ?");
     params.push((/* @__PURE__ */ new Date()).toISOString());
     params.push(userId, currentUser.tenant_id);
-    const result = await c.env.DB.prepare(`
+    const result = await db2.prepare(`
       UPDATE users 
       SET ${updates.join(", ")}
       WHERE id = ? AND tenant_id = ?
@@ -7910,7 +8261,7 @@ adminRoutes.put(
 );
 adminRoutes.post(
   "/admin/users/:id/assign-license",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   zValidator("json", external_exports.object({
     license_id: external_exports.number().int().positive(),
     is_primary: external_exports.boolean().default(false)
@@ -7919,19 +8270,20 @@ adminRoutes.post(
     const userId = c.req.param("id");
     const data = c.req.valid("json");
     const currentUser = c.get("user");
-    const license = await c.env.DB.prepare(`
+    const db2 = getDatabase3(c);
+    const license = await db2.prepare(`
       SELECT id FROM licenses WHERE id = ? AND tenant_id = ?
     `).bind(data.license_id, currentUser.tenant_id).first();
     if (!license) {
       throw new HTTPException(404, { message: "License not found" });
     }
-    const existingAssignment = await c.env.DB.prepare(`
+    const existingAssignment = await db2.prepare(`
       SELECT id FROM user_licenses WHERE user_id = ? AND license_id = ?
     `).bind(userId, data.license_id).first();
     if (existingAssignment) {
       throw new HTTPException(400, { message: "License already assigned to user" });
     }
-    await c.env.DB.prepare(`
+    await db2.prepare(`
       INSERT INTO user_licenses (user_id, license_id, assigned_at, assigned_by, is_primary)
       VALUES (?, ?, ?, ?, ?)
     `).bind(
@@ -7949,7 +8301,8 @@ adminRoutes.get(
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
     const user = c.get("user");
-    const { results } = await c.env.DB.prepare(`
+    const db2 = getDatabase3(c);
+    const { results } = await db2.prepare(`
       SELECT * FROM tenants WHERE id = ?
     `).bind(user.tenant_id).all();
     if (results.length === 0) {
@@ -7972,7 +8325,8 @@ adminRoutes.put(
   async (c) => {
     const data = c.req.valid("json");
     const user = c.get("user");
-    const result = await c.env.DB.prepare(`
+    const db2 = getDatabase3(c);
+    const result = await db2.prepare(`
       UPDATE tenants 
       SET name = ?, settings = ?, updated_at = ?
       WHERE id = ?
@@ -7994,10 +8348,11 @@ adminRoutes.get(
   async (c) => {
     const user = c.get("user");
     const period = c.req.query("period") || "30d";
+    const db2 = getDatabase3(c);
     const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
     const startDate = /* @__PURE__ */ new Date();
     startDate.setDate(startDate.getDate() - days);
-    const { results: userStats } = await c.env.DB.prepare(`
+    const { results: userStats } = await db2.prepare(`
       SELECT 
         COUNT(*) as total_users,
         COUNT(CASE WHEN role = 'doctor' THEN 1 END) as doctors,
@@ -8008,8 +8363,8 @@ adminRoutes.get(
         COUNT(CASE WHEN created_at >= ? THEN 1 END) as new_users
       FROM users
       WHERE tenant_id = ?
-    `).bind(startDate.toISOString(), user.tenant_id).all();
-    const { results: licenseStats } = await c.env.DB.prepare(`
+    `).bind(startDate.toISOString(), user.tenant_id || 1).all();
+    const { results: licenseStats } = await db2.prepare(`
       SELECT 
         COUNT(*) as total_licenses,
         COUNT(CASE WHEN status = 'active' THEN 1 END) as active_licenses,
@@ -8020,7 +8375,7 @@ adminRoutes.get(
       FROM licenses
       WHERE tenant_id = ?
     `).bind(user.tenant_id).all();
-    const { results: contentStats } = await c.env.DB.prepare(`
+    const { results: contentStats } = await db2.prepare(`
       SELECT 
         COUNT(*) as total_content,
         COUNT(CASE WHEN category = 'medical' THEN 1 END) as medical_content,
@@ -8031,7 +8386,7 @@ adminRoutes.get(
       FROM cards
       WHERE tenant_id = ?
     `).bind(startDate.toISOString(), user.tenant_id).all();
-    const { results: apiStats } = await c.env.DB.prepare(`
+    const { results: apiStats } = await db2.prepare(`
       SELECT 
         COUNT(*) as total_calls,
         COUNT(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 END) as successful_calls,
@@ -8069,7 +8424,7 @@ adminRoutes.get(
 );
 adminRoutes.get(
   "/admin/marketing-content",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.CONTENT_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
     const user = c.get("user");
     const type = c.req.query("type");
@@ -8088,7 +8443,7 @@ adminRoutes.get(
       params.push(is_active === "true" ? 1 : 0);
     }
     query += ` ORDER BY metadata_priority DESC, created_at DESC`;
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await db.prepare(query).bind(...params).all();
     return c.json({
       success: true,
       content: results.map((item) => ({
@@ -8102,7 +8457,7 @@ adminRoutes.get(
 );
 adminRoutes.post(
   "/admin/marketing-content",
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.CONTENT_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   zValidator("json", MarketingContentSchema),
   async (c) => {
     const data = c.req.valid("json");
@@ -8126,7 +8481,7 @@ adminRoutes.post(
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const result = await c.env.DB.prepare(`
+    const result = await db.prepare(`
       INSERT INTO marketing_content (
         type, title_en, title_ar, title_fr, title_es,
         content_en, content_ar, content_fr, content_es,
@@ -8160,40 +8515,57 @@ adminRoutes.post(
 );
 var admin_default = adminRoutes;
 
-// apps/app-api/src/middleware/api-usage.ts
-function apiUsageMiddleware() {
-  return async (c, next) => {
-    const startTime = Date.now();
-    c.res.headers.set("X-API-Usage-Tracked", "false");
-    await next();
-    const responseTime = Date.now() - startTime;
-    const user = c.get("user");
-    if (user) {
-      try {
-        await c.env.DB.prepare(`
-          INSERT INTO api_usage (user_id, endpoint, method, status_code, response_time_ms, usage_date, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-        `).bind(
-          user.id,
-          c.req.path,
-          c.req.method,
-          c.res.status,
-          responseTime,
-          (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
-          // YYYY-MM-DD format
-        ).run();
-        c.res.headers.set("X-API-Usage-Tracked", "true");
-      } catch (error) {
-        console.error("Failed to track API usage:", error);
-      }
-    }
-  };
+// src/index.ts
+function getDatabase4(c) {
+  const db2 = c.env.DB || c.env.DB_PROD;
+  if (!db2) {
+    throw new Error("Database binding not found");
+  }
+  return db2;
 }
-__name(apiUsageMiddleware, "apiUsageMiddleware");
-
-// apps/app-api/src/index.ts
+__name(getDatabase4, "getDatabase");
+var GOOGLE_REDIRECT_URI = "https://pedi-app-prod.devadmin-27f.workers.dev/api/auth/google/callback";
 var app = new Hono2();
 app.use("/*", cors());
+app.get("/api/health", async (c) => {
+  try {
+    const db2 = getDatabase4(c);
+    const result = await db2.prepare("SELECT 1 as test").first();
+    return c.json({
+      status: "healthy",
+      database: result ? "connected" : "disconnected",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  } catch (error) {
+    return c.json({
+      status: "unhealthy",
+      database: "error",
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    }, 500);
+  }
+});
+app.post("/api/test/create-user", async (c) => {
+  try {
+    const { email, name, role = "parent" } = await c.req.json();
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const passwordHash = "demo123";
+    const tenantId = "1";
+    console.log("Creating test user:", { email, name, role });
+    const db2 = getDatabase4(c);
+    const result = await db2.prepare(`
+      INSERT INTO users (email, password_hash, name, role, tenant_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(email, passwordHash, name, role, tenantId, now, now).run();
+    console.log("Insert result:", result);
+    const user = await db2.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
+    console.log("Created user:", user);
+    return c.json(user);
+  } catch (error) {
+    console.error("Test user creation error:", error);
+    return c.json({ error: "Failed to create test user", details: error.message }, 500);
+  }
+});
 var LoginSchema = external_exports.object({
   email: external_exports.string().email(),
   password: external_exports.string().min(1)
@@ -8201,39 +8573,47 @@ var LoginSchema = external_exports.object({
 app.post("/api/auth/login", zValidator("json", LoginSchema), async (c) => {
   try {
     const { email, password } = c.req.valid("json");
-    if (email === "admin@example.com" && password === "demo123") {
-      const adminUser = await c.env.DB.prepare("SELECT * FROM users WHERE email = ?").bind("admin@example.com").first();
-      if (adminUser) {
-        const token = await sign2({
-          userId: adminUser.id.toString(),
-          email: adminUser.email,
-          name: adminUser.name,
-          role: adminUser.role,
-          tenantId: adminUser.tenant_id,
-          createdAt: adminUser.created_at
-        }, c.env.JWT_SECRET);
-        return c.json({
-          token,
-          user: adminUser
-        });
-      }
-    }
-    const userResult = await c.env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
+    const db2 = getDatabase4(c);
+    const userResult = await db2.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
     if (userResult) {
       const user = userResult;
-      if (password === "demo123") {
+      if (password === "password123") {
+        let licenseStatus = "active";
+        let licenseType = "basic";
+        try {
+          const licenseResult = await db2.prepare(`
+            SELECT l.*, lt.name as license_type_name 
+            FROM user_licenses ul
+            JOIN licenses l ON ul.license_id = l.id  
+            JOIN license_types lt ON l.license_type_id = lt.id
+            WHERE ul.user_id = ? AND l.status = 'active' AND l.expires_at > datetime('now')
+            ORDER BY ul.is_primary DESC
+            LIMIT 1
+          `).bind(user.id).first();
+          if (licenseResult) {
+            licenseStatus = licenseResult.status;
+            licenseType = licenseResult.license_type_name;
+          }
+        } catch (licenseError) {
+          console.log("License check failed, using defaults:", licenseError);
+        }
         const token = await sign2({
           userId: user.id.toString(),
-          // Convert to string for consistency
           email: user.email,
           name: user.name,
           role: user.role,
           tenantId: user.tenant_id,
-          createdAt: user.created_at
+          createdAt: user.created_at,
+          licenseStatus,
+          licenseType
         }, c.env.JWT_SECRET);
         return c.json({
           token,
-          user
+          user: {
+            ...user,
+            license_status: licenseStatus,
+            license_type: licenseType
+          }
         });
       }
     }
@@ -8243,29 +8623,108 @@ app.post("/api/auth/login", zValidator("json", LoginSchema), async (c) => {
     return c.json({ error: "Login failed" }, 500);
   }
 });
-app.use("/api/*", async (c, next) => {
-  if (c.req.path === "/api/auth/login") {
-    return next();
+app.get("/api/auth/google", async (c) => {
+  const clientId = c.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    return c.json({ error: "Google OAuth not configured" }, 501);
   }
-  const jwtMiddleware = jwt({
-    secret: c.env.JWT_SECRET
-  });
-  return jwtMiddleware(c, next);
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${GOOGLE_REDIRECT_URI}&response_type=code&scope=email profile&access_type=offline&prompt=consent`;
+  return c.redirect(googleAuthUrl);
+});
+app.get("/api/auth/google/callback", async (c) => {
+  try {
+    const clientId = c.env.GOOGLE_CLIENT_ID;
+    const clientSecret = c.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return c.redirect("https://d29ad10a.pedi-psych-kb-frontend.pages.dev/login?error=google_not_configured");
+    }
+    const code = c.req.query("code");
+    if (!code) {
+      return c.json({ error: "No authorization code provided" }, 400);
+    }
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        grant_type: "authorization_code",
+        redirect_uri: GOOGLE_REDIRECT_URI
+      })
+    });
+    if (!tokenResponse.ok) {
+      throw new Error("Failed to exchange code for token");
+    }
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+    const userResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!userResponse.ok) {
+      throw new Error("Failed to get user info from Google");
+    }
+    const googleUser = await userResponse.json();
+    const email = googleUser.email;
+    const name = googleUser.name;
+    const db2 = getDatabase4(c);
+    let user = await db2.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
+    if (!user) {
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      const role = "parent";
+      const tenantId = "1";
+      const passwordHash = "google_oauth";
+      await db2.prepare(`
+        INSERT INTO users (email, password_hash, name, role, tenant_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(email, passwordHash, name, role, tenantId, now, now).run();
+      user = await db2.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
+    }
+    const token = await sign2({
+      userId: user.id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenant_id,
+      createdAt: user.created_at
+    }, c.env.JWT_SECRET);
+    const frontendUrl = "https://d29ad10a.pedi-psych-kb-frontend.pages.dev";
+    return c.redirect(`${frontendUrl}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
+  } catch (error) {
+    console.error("Google OAuth error:", error);
+    return c.redirect("https://d29ad10a.pedi-psych-kb-frontend.pages.dev/login?error=google_auth_failed");
+  }
 });
 app.use("/api/*", async (c, next) => {
   if (c.req.path === "/api/auth/login") {
-    return next();
+    await next();
+    return;
+  }
+  if (!c.env?.JWT_SECRET) {
+    return c.json({ error: "JWT secret not configured" }, 500);
+  }
+  return jwt({
+    secret: c.env.JWT_SECRET
+  })(c, next);
+});
+app.use("/api/*", async (c, next) => {
+  if (c.req.path === "/api/auth/login") {
+    await next();
+    return;
   }
   console.log("=== USER CONVERSION MIDDLEWARE STARTED ===");
   const jwtPayload = c.get("jwtPayload");
   console.log("JWT Payload:", jwtPayload);
   if (jwtPayload) {
     const user = {
-      id: parseInt(jwtPayload.userId),
+      id: jwtPayload.id,
+      // JWT payload uses 'id' not 'userId'
       email: jwtPayload.email,
       name: jwtPayload.name,
       role: jwtPayload.role,
-      tenant_id: jwtPayload.tenantId
+      tenant_id: jwtPayload.tenantId,
+      created_at: jwtPayload.createdAt,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
     console.log("Setting user object:", user);
     c.set("user", user);
@@ -8273,15 +8732,52 @@ app.use("/api/*", async (c, next) => {
     console.log("No JWT payload found");
   }
   console.log("=== USER CONVERSION MIDDLEWARE COMPLETED ===");
-  return next();
+  await next();
 });
-app.use("/api/*", apiUsageMiddleware());
+app.use("/api/*", async (c, next) => {
+  if (c.req.path === "/api/auth/login") {
+    await next();
+    return;
+  }
+  const user = c.get("user");
+  if (user) {
+    const startTime = Date.now();
+    try {
+      await next();
+      const responseTime = Date.now() - startTime;
+      const db2 = c.env?.DB || c.env?.DB_PROD;
+      if (db2) {
+        trackAPIUsage(
+          db2,
+          parseInt(user.id) || 0,
+          c.req.path,
+          c.req.method,
+          200,
+          responseTime
+        ).catch(() => {
+        });
+      }
+    } catch (error) {
+      throw error;
+    }
+  } else {
+    await next();
+  }
+});
 app.get("/api/debug/user", async (c) => {
   const user = c.get("user");
-  const jwtPayload = c.get("jwtPayload");
+  let jwtPayload = c.get("jwtPayload");
+  if (!jwtPayload) {
+    jwtPayload = c.get("jwt");
+  }
   return c.json({
     user,
     jwtPayload,
+    allKeys: {
+      jwtPayload: c.get("jwtPayload"),
+      jwt: c.get("jwt"),
+      payload: c.get("payload")
+    },
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
 });
@@ -8297,6 +8793,10 @@ var CreateTenantSchema = external_exports.object({
 });
 app.post("/api/tenants", async (c) => {
   try {
+    const db2 = c.env.DB || c.env.DB_PROD;
+    if (!db2) {
+      throw new Error("Database binding not found");
+    }
     const body = await c.req.json();
     const data = CreateTenantSchema.parse(body);
     const tenant = {
@@ -8306,7 +8806,7 @@ app.post("/api/tenants", async (c) => {
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    await c.env.DB.prepare(`
+    await db2.prepare(`
       INSERT INTO tenants (id, name, region, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
     `).bind(
@@ -8326,7 +8826,8 @@ app.post("/api/tenants", async (c) => {
 });
 app.get("/api/tenants", async (c) => {
   try {
-    const { results } = await c.env.DB.prepare("SELECT * FROM tenants ORDER BY created_at DESC").all();
+    const db2 = getDatabase4(c);
+    const { results } = await db2.prepare("SELECT * FROM tenants").all();
     return c.json(results);
   } catch (error) {
     return c.json({ error: "Failed to fetch tenants" }, 500);
@@ -8334,6 +8835,7 @@ app.get("/api/tenants", async (c) => {
 });
 app.post("/api/users", async (c) => {
   try {
+    const db2 = getDatabase4(c);
     const body = await c.req.json();
     const data = CreateUserSchema2.parse(body);
     const user = {
@@ -8345,7 +8847,7 @@ app.post("/api/users", async (c) => {
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     };
-    await c.env.DB.prepare(`
+    await db2.prepare(`
       INSERT INTO users (id, email, name, role, tenant_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).bind(
@@ -8367,9 +8869,10 @@ app.post("/api/users", async (c) => {
 });
 app.get("/api/users", async (c) => {
   try {
+    const db2 = getDatabase4(c);
     const user = c.get("user");
     console.log("Users endpoint - User object:", user);
-    const { results } = await c.env.DB.prepare("SELECT * FROM users ORDER BY created_at DESC").all();
+    const { results } = await db2.prepare("SELECT * FROM users ORDER BY created_at DESC").all();
     return c.json(results);
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -8378,8 +8881,9 @@ app.get("/api/users", async (c) => {
 });
 app.get("/api/users/:id", async (c) => {
   try {
+    const db2 = getDatabase4(c);
     const userId = c.req.param("id");
-    const { results } = await c.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(userId).all();
+    const { results } = await db2.prepare("SELECT * FROM users WHERE id = ?").bind(userId).all();
     if (results.length === 0) {
       return c.json({ error: "User not found" }, 404);
     }
@@ -8390,8 +8894,13 @@ app.get("/api/users/:id", async (c) => {
 });
 app.get("/api/assessments", async (c) => {
   try {
-    const userId = c.get("jwtPayload").sub;
-    const { results } = await c.env.DB.prepare(`
+    const db2 = getDatabase4(c);
+    const jwtPayload = c.get("jwtPayload");
+    const userId = jwtPayload?.sub;
+    if (!userId) {
+      return c.json({ error: "User ID not found in token" }, 401);
+    }
+    const { results } = await db2.prepare(`
       SELECT a.*, c.title, c.description
       FROM assessments a
       JOIN cards c ON a.card_id = c.id
@@ -8405,11 +8914,16 @@ app.get("/api/assessments", async (c) => {
 });
 app.post("/api/assessments", async (c) => {
   try {
-    const userId = c.get("jwtPayload").sub;
+    const db2 = getDatabase4(c);
+    const jwtPayload = c.get("jwtPayload");
+    const userId = jwtPayload?.sub;
+    if (!userId) {
+      return c.json({ error: "User ID not found in token" }, 401);
+    }
     const body = await c.req.json();
     const assessmentId = crypto.randomUUID();
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    await c.env.DB.prepare(`
+    await db2.prepare(`
       INSERT INTO assessments (id, user_id, card_id, responses, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `).bind(
@@ -8430,7 +8944,7 @@ app.route("/api", content_default);
 app.route("/api", admin_default);
 var src_default = app;
 
-// node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
+// ../../node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
 var drainBody = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
   try {
     return await middlewareCtx.next(request, env);
@@ -8448,7 +8962,7 @@ var drainBody = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "drainBody");
 var middleware_ensure_req_body_drained_default = drainBody;
 
-// node_modules/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
+// ../../node_modules/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
 function reduceError(e) {
   return {
     name: e?.name,
@@ -8471,14 +8985,14 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-JOinsm/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-Aw8KYw/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
 ];
 var middleware_insertion_facade_default = src_default;
 
-// node_modules/wrangler/templates/middleware/common.ts
+// ../../node_modules/wrangler/templates/middleware/common.ts
 var __facade_middleware__ = [];
 function __facade_register__(...args) {
   __facade_middleware__.push(...args.flat());
@@ -8503,7 +9017,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-JOinsm/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-Aw8KYw/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

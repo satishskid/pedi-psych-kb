@@ -5,7 +5,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 const resources = {
   en: {
     translation: {
-      'app.title': 'Pediatric Psychology Knowledge Base',
+      'app.title': 'TinyVibes',
       'app.search': 'Search',
       'app.search.placeholder': 'Search for guidance...',
       'app.language': 'Language',
@@ -27,7 +27,7 @@ const resources = {
   },
   hi: {
     translation: {
-      'app.title': 'बाल मनोविज्ञान ज्ञान आधार',
+      'app.title': 'TinyVibes',
       'app.search': 'खोजें',
       'app.search.placeholder': 'मार्गदर्शन खोजें...',
       'app.language': 'भाषा',
@@ -49,7 +49,7 @@ const resources = {
   },
   ar: {
     translation: {
-      'app.title': 'قاعدة معرفة علم النفس للأطفال',
+      'app.title': 'TinyVibes',
       'app.search': 'بحث',
       'app.search.placeholder': 'ابحث عن إرشادات...',
       'app.language': 'اللغة',

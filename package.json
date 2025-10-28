@@ -18,17 +18,55 @@
     "build:app-api": "cd apps/app-api && tsc",
     "build:ops-api": "cd apps/ops-api && tsc",
     "build:frontend": "cd apps/frontend && vite build",
+    
     "deploy": "npm run deploy:kb-api && npm run deploy:app-api && npm run deploy:ops-api && npm run deploy:frontend",
     "deploy:kb-api": "cd apps/kb-api && wrangler deploy",
     "deploy:app-api": "cd apps/app-api && wrangler deploy",
     "deploy:ops-api": "cd apps/ops-api && wrangler deploy",
     "deploy:frontend": "cd apps/frontend && wrangler pages deploy dist",
+    
+    "deploy:production": "./scripts/deploy-production.sh",
+    "deploy:staging": "NODE_ENV=staging ./scripts/deploy-production.sh",
+    "deploy:development": "NODE_ENV=development ./scripts/deploy-production.sh",
+    
+    "deploy:cloudflare": "npm run deploy:backend && npm run deploy:frontend",
+    "deploy:backend": "npm run deploy:kb-api && npm run deploy:app-api && npm run deploy:ops-api",
+    "deploy:frontend": "cd apps/frontend && wrangler pages deploy dist --project-name=pedi-psych-kb-frontend",
+    
+    "setup:cloudflare": "npm run setup:database && npm run setup:kv && npm run setup:domain",
+    "setup:database": "wrangler d1 create pedi-psych-kb-prod || true",
+    "setup:kv": "wrangler kv:namespace create POLICIES_PROD || true && wrangler kv:namespace create POLICIES_PROD_PREVIEW || true",
+    "setup:domain": "echo 'Please configure your custom domain in Cloudflare dashboard'",
+    
+    "db:create": "wrangler d1 create pedi-psych-kb-prod",
+    "db:migrate": "wrangler d1 execute pedi-psych-kb-prod --file=database/schema.sql",
+    "db:seed": "wrangler d1 execute pedi-psych-kb-prod --file=database/seed.sql",
+    "db:reset": "wrangler d1 delete pedi-psych-kb-prod && npm run db:create && npm run db:migrate && npm run db:seed",
+    "db:backup": "wrangler d1 export pedi-psych-kb-prod --output=backup.sql",
+    "db:restore": "wrangler d1 execute pedi-psych-kb-prod --file=backup.sql",
+    
     "seed:kb": "ts-node scripts/seed_kb_to_kv.ts",
     "seed:policies": "ts-node scripts/seed_policies.ts",
     "seed:locales": "ts-node scripts/seed_locales.ts",
+    
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "typecheck": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    
+    "start:production": "npm run build && npm run deploy:production",
+    "start:staging": "npm run build && npm run deploy:staging",
+    "start:development": "npm run build && npm run deploy:development",
+    
+    "health:check": "curl -f http://localhost:8787/health && curl -f http://localhost:8788/health && curl -f http://localhost:8789/health || echo 'Some services are not healthy'",
+    "logs:tail": "wrangler tail",
+    
+    "security:audit": "npm audit && npm run lint && npm run typecheck",
+    "security:fix": "npm audit fix",
+    
+    "ci:build": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "ci:deploy": "npm run ci:build && npm run deploy:production"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241018.0",

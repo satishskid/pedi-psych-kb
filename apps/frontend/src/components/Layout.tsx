@@ -53,9 +53,12 @@ const Layout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
-              <Link to="/app" className="text-xl font-bold text-gray-900">
-                {t('app.title')}
-              </Link>
+              <div className="flex flex-col">
+                <Link to="/app" className="text-xl font-bold text-gray-900">
+                  {t('app.title')}
+                </Link>
+                <span className="text-xs text-gray-500">Made by GreyBrain.ai</span>
+              </div>
               <div className="flex space-x-4">
                 <Link
                   to="/app"

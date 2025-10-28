@@ -70,11 +70,15 @@ const LandingPage: React.FC = () => {
             </div>
             
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              The World's Most Trusted
-              <span className="text-indigo-600 block mt-2">
-                Pediatric Behavioral Knowledge Base
+              <span className="text-indigo-600 block">TinyVibes</span>
+              <span className="text-3xl md:text-4xl text-gray-700 block mt-4">
+                Science-based AI-powered pediatric behavioral care
               </span>
             </h1>
+            
+            <p className="text-lg text-gray-600 mb-4 max-w-2xl mx-auto">
+              Made by <span className="font-semibold text-indigo-600">GreyBrain.ai</span>
+            </p>
             
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
               Empowering families, clinicians, and educators with evidence-based guidance on pediatric behavioral health. 
