@@ -3,8 +3,17 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { HTTPException } from 'hono/http-exception';
 import { licenseMiddleware } from '../middleware/license';
-import { LicenseFeatures, UserRole } from '@pedi-psych/shared';
+import { LicenseFeatures } from '@pedi-psych/shared';
 import type { Env } from '../index';
+
+// Helper function to get database binding
+function getDatabase(c: any) {
+  const db = c.env.DB || c.env.DB_PROD;
+  if (!db) {
+    throw new HTTPException(500, { message: 'Database binding not found' });
+  }
+  return db;
+}
 
 // Helper function for password hashing (simplified for demo)
 async function hashPassword(password: string): Promise<string> {
@@ -88,15 +97,17 @@ const MarketingContentSchema = z.object({
 
 // User management routes
 adminRoutes.get('/admin/users',
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
-    const user = c.get('user');
+    const user = c.get('user' as any);
     const page = Number(c.req.query('page') || '1');
     const limit = Number(c.req.query('limit') || '20');
     const offset = (page - 1) * limit;
     const search = c.req.query('search') || '';
     const role = c.req.query('role');
     const is_active = c.req.query('is_active');
+    
+    const db = getDatabase(c);
     
     let query = `
       SELECT u.*, 
@@ -110,7 +121,7 @@ adminRoutes.get('/admin/users',
       WHERE u.tenant_id = ?
     `;
     
-    const params = [user.tenant_id];
+    const params = [user.tenant_id || 1]; // Default to tenant_id 1 if undefined
     
     if (search) {
       query += ` AND (u.name LIKE ? OR u.email LIKE ?)`;
@@ -135,7 +146,7 @@ adminRoutes.get('/admin/users',
     
     params.push(limit, offset);
     
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await db.prepare(query).bind(...params).all();
     
     // Get total count
     const countQuery = `
@@ -147,12 +158,12 @@ adminRoutes.get('/admin/users',
       ${is_active !== undefined ? 'AND u.is_active = ?' : ''}
     `;
     
-    const countParams = [user.tenant_id];
+    const countParams = [user.tenant_id || 1]; // Default to tenant_id 1 if undefined
     if (search) countParams.push(`%${search}%`, `%${search}%`);
     if (role) countParams.push(role);
     if (is_active !== undefined) countParams.push(is_active === 'true' ? 1 : 0);
     
-    const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first();
+    const countResult = await db.prepare(countQuery).bind(...countParams).first();
     
     return c.json({
       success: true,
@@ -164,21 +175,23 @@ adminRoutes.get('/admin/users',
         page,
         limit,
         total: countResult?.total || 0,
-        total_pages: Math.ceil((countResult?.total || 0) / limit)
+        total_pages: Math.ceil((Number(countResult?.total) || 0) / limit)
       }
     });
   }
 );
 
 adminRoutes.post('/admin/users',
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   zValidator('json', CreateUserSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const currentUser = c.get('user');
+    const currentUser = c.get('user' as any);
+    
+    const db = getDatabase(c);
     
     // Check if user already exists
-    const existingUser = await c.env.DB.prepare(`
+    const existingUser = await db.prepare(`
       SELECT id FROM users WHERE email = ?
     `).bind(data.email).first();
     
@@ -202,7 +215,7 @@ adminRoutes.post('/admin/users',
       updated_at: new Date().toISOString(),
     };
     
-    const result = await c.env.DB.prepare(`
+    const result = await db.prepare(`
       INSERT INTO users (
         email, name, role, tenant_id, password_hash, metadata,
         is_active, created_at, updated_at
@@ -231,12 +244,14 @@ adminRoutes.post('/admin/users',
 );
 
 adminRoutes.get('/admin/users/:id',
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
     const userId = c.req.param('id');
-    const currentUser = c.get('user');
+    const currentUser = c.get('user' as any);
     
-    const { results } = await c.env.DB.prepare(`
+    const db = getDatabase(c);
+    
+    const { results } = await db.prepare(`
       SELECT u.*, 
              COUNT(DISTINCT ul.id) as license_count,
              COUNT(DISTINCT l.id) as active_licenses,
@@ -259,7 +274,7 @@ adminRoutes.get('/admin/users/:id',
     const user = results[0] as any;
     
     // Get user's licenses
-    const { results: licenses } = await c.env.DB.prepare(`
+    const { results: licenses } = await db.prepare(`
       SELECT l.*, lt.name as license_type_name, lt.features
       FROM licenses l
       JOIN license_types lt ON l.license_type_id = lt.id
@@ -269,7 +284,7 @@ adminRoutes.get('/admin/users/:id',
     `).bind(userId).all();
     
     // Get recent activity
-    const { results: recentActivity } = await c.env.DB.prepare(`
+    const { results: recentActivity } = await db.prepare(`
       SELECT 
         DATE(created_at) as date,
         COUNT(*) as activity_count,
@@ -296,12 +311,14 @@ adminRoutes.get('/admin/users/:id',
 );
 
 adminRoutes.put('/admin/users/:id',
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   zValidator('json', UpdateUserSchema),
   async (c) => {
     const userId = c.req.param('id');
     const data = c.req.valid('json');
-    const currentUser = c.get('user');
+    const currentUser = c.get('user' as any);
+    
+    const db = getDatabase(c);
     
     const updates = [];
     const params = [];
@@ -331,7 +348,7 @@ adminRoutes.put('/admin/users/:id',
     
     params.push(userId, currentUser.tenant_id);
     
-    const result = await c.env.DB.prepare(`
+    const result = await db.prepare(`
       UPDATE users 
       SET ${updates.join(', ')}
       WHERE id = ? AND tenant_id = ?
@@ -347,7 +364,7 @@ adminRoutes.put('/admin/users/:id',
 
 // License management
 adminRoutes.post('/admin/users/:id/assign-license',
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.USER_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   zValidator('json', z.object({
     license_id: z.number().int().positive(),
     is_primary: z.boolean().default(false),
@@ -355,10 +372,12 @@ adminRoutes.post('/admin/users/:id/assign-license',
   async (c) => {
     const userId = c.req.param('id');
     const data = c.req.valid('json');
-    const currentUser = c.get('user');
+    const currentUser = c.get('user' as any);
+    
+    const db = getDatabase(c);
     
     // Verify license belongs to tenant
-    const license = await c.env.DB.prepare(`
+    const license = await db.prepare(`
       SELECT id FROM licenses WHERE id = ? AND tenant_id = ?
     `).bind(data.license_id, currentUser.tenant_id).first();
     
@@ -367,7 +386,7 @@ adminRoutes.post('/admin/users/:id/assign-license',
     }
     
     // Check if assignment already exists
-    const existingAssignment = await c.env.DB.prepare(`
+    const existingAssignment = await db.prepare(`
       SELECT id FROM user_licenses WHERE user_id = ? AND license_id = ?
     `).bind(userId, data.license_id).first();
     
@@ -375,7 +394,7 @@ adminRoutes.post('/admin/users/:id/assign-license',
       throw new HTTPException(400, { message: 'License already assigned to user' });
     }
     
-    await c.env.DB.prepare(`
+    await db.prepare(`
       INSERT INTO user_licenses (user_id, license_id, assigned_at, assigned_by, is_primary)
       VALUES (?, ?, ?, ?, ?)
     `).bind(
@@ -394,9 +413,10 @@ adminRoutes.post('/admin/users/:id/assign-license',
 adminRoutes.get('/admin/tenant',
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
-    const user = c.get('user');
+    const user = c.get('user' as any);
     
-    const { results } = await c.env.DB.prepare(`
+    const db = getDatabase(c);
+    const { results } = await db.prepare(`
       SELECT * FROM tenants WHERE id = ?
     `).bind(user.tenant_id).all();
     
@@ -421,9 +441,11 @@ adminRoutes.put('/admin/tenant',
   zValidator('json', TenantSettingsSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const user = c.get('user');
+    const user = c.get('user' as any);
     
-    const result = await c.env.DB.prepare(`
+    const db = getDatabase(c);
+    
+    const result = await db.prepare(`
       UPDATE tenants 
       SET name = ?, settings = ?, updated_at = ?
       WHERE id = ?
@@ -446,8 +468,10 @@ adminRoutes.put('/admin/tenant',
 adminRoutes.get('/admin/analytics',
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
-    const user = c.get('user');
+    const user = c.get('user' as any);
     const period = c.req.query('period') || '30d';
+    
+    const db = getDatabase(c);
     
     // Calculate date range
     const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
@@ -455,7 +479,7 @@ adminRoutes.get('/admin/analytics',
     startDate.setDate(startDate.getDate() - days);
     
     // User analytics
-    const { results: userStats } = await c.env.DB.prepare(`
+    const { results: userStats } = await db.prepare(`
       SELECT 
         COUNT(*) as total_users,
         COUNT(CASE WHEN role = 'doctor' THEN 1 END) as doctors,
@@ -466,10 +490,10 @@ adminRoutes.get('/admin/analytics',
         COUNT(CASE WHEN created_at >= ? THEN 1 END) as new_users
       FROM users
       WHERE tenant_id = ?
-    `).bind(startDate.toISOString(), user.tenant_id).all();
+    `).bind(startDate.toISOString(), user.tenant_id || 1).all();
     
     // License analytics
-    const { results: licenseStats } = await c.env.DB.prepare(`
+    const { results: licenseStats } = await db.prepare(`
       SELECT 
         COUNT(*) as total_licenses,
         COUNT(CASE WHEN status = 'active' THEN 1 END) as active_licenses,
@@ -482,7 +506,7 @@ adminRoutes.get('/admin/analytics',
     `).bind(user.tenant_id).all();
     
     // Content analytics
-    const { results: contentStats } = await c.env.DB.prepare(`
+    const { results: contentStats } = await db.prepare(`
       SELECT 
         COUNT(*) as total_content,
         COUNT(CASE WHEN category = 'medical' THEN 1 END) as medical_content,
@@ -495,7 +519,7 @@ adminRoutes.get('/admin/analytics',
     `).bind(startDate.toISOString(), user.tenant_id).all();
     
     // API usage analytics
-    const { results: apiStats } = await c.env.DB.prepare(`
+    const { results: apiStats } = await db.prepare(`
       SELECT 
         COUNT(*) as total_calls,
         COUNT(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 END) as successful_calls,
@@ -532,9 +556,9 @@ adminRoutes.get('/admin/analytics',
 
 // Marketing content management
 adminRoutes.get('/admin/marketing-content',
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.CONTENT_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
-    const user = c.get('user');
+    const user = c.get('user' as any);
     const type = c.req.query('type');
     const is_active = c.req.query('is_active');
     
@@ -557,7 +581,7 @@ adminRoutes.get('/admin/marketing-content',
     
     query += ` ORDER BY metadata_priority DESC, created_at DESC`;
     
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await db.prepare(query).bind(...params).all();
     
     return c.json({
       success: true,
@@ -572,11 +596,11 @@ adminRoutes.get('/admin/marketing-content',
 );
 
 adminRoutes.post('/admin/marketing-content',
-  licenseMiddleware({ requiredFeatures: [LicenseFeatures.CONTENT_MANAGEMENT] }),
+  licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   zValidator('json', MarketingContentSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const user = c.get('user');
+    const user = c.get('user' as any);
     
     const content = {
       type: data.type,
@@ -598,7 +622,7 @@ adminRoutes.post('/admin/marketing-content',
       updated_at: new Date().toISOString(),
     };
     
-    const result = await c.env.DB.prepare(`
+    const result = await db.prepare(`
       INSERT INTO marketing_content (
         type, title_en, title_ar, title_fr, title_es,
         content_en, content_ar, content_fr, content_es,

@@ -1,44 +1,29 @@
 import { Context, Next } from 'hono';
-import { Env } from '../index';
+import { HTTPException } from 'hono/http-exception';
+import type { Env } from '../index';
+
+// Helper function to get database instance
+function getDatabase(c: any) {
+  console.log('getDatabase - c.env:', c.env);
+  console.log('getDatabase - c.env.DB:', c.env?.DB);
+  console.log('getDatabase - c.env.DB_PROD:', c.env?.DB_PROD);
+  
+  if (c.env?.DB) {
+    return c.env.DB;
+  } else if (c.env?.DB_PROD) {
+    return c.env.DB_PROD;
+  }
+  throw new HTTPException(500, { message: 'Database not available' });
+}
 
 /**
  * API Usage Tracking Middleware
  * Tracks API usage for analytics and rate limiting
  */
 export function apiUsageMiddleware() {
-  return async (c: Context<Env>, next: Next) => {
-    const startTime = Date.now();
-    
-    // Add a response header to indicate middleware was called
-    c.res.headers.set('X-API-Usage-Tracked', 'false');
-    
-    // Let the request proceed
+  return async (c: Context<any>, next: Next) => {
+    // Temporarily disabled to test if this is causing the issue
     await next();
-    
-    // Track usage after response
-    const responseTime = Date.now() - startTime;
-    const user = c.get('user');
-    
-    if (user) {
-      try {
-        // Insert API usage record
-        await c.env.DB.prepare(`
-          INSERT INTO api_usage (user_id, endpoint, method, status_code, response_time_ms, usage_date, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-        `).bind(
-          user.id,
-          c.req.path,
-          c.req.method,
-          c.res.status,
-          responseTime,
-          new Date().toISOString().slice(0, 10) // YYYY-MM-DD format
-        ).run();
-        c.res.headers.set('X-API-Usage-Tracked', 'true');
-      } catch (error) {
-        console.error('Failed to track API usage:', error);
-        // Don't fail the request if tracking fails
-      }
-    }
   };
 }
 

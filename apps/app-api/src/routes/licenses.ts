@@ -6,6 +6,15 @@ import { licenseMiddleware, hasLicenseFeature, trackAPIUsage } from '../middlewa
 import { LicenseFeatures, LicenseStatus } from '@pedi-psych/shared';
 import type { Env } from '../index';
 
+// Helper function to get database binding
+function getDatabase(c: any) {
+  const db = c.env.DB || c.env.DB_PROD;
+  if (!db) {
+    throw new Error('Database binding not found');
+  }
+  return db;
+}
+
 const licenseRoutes = new Hono<{ Bindings: Env }>();
 
 // Schema definitions
@@ -90,7 +99,8 @@ function generateLicenseKey(): string {
 licenseRoutes.get('/license-types', 
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.ADVANCED_ANALYTICS] }),
   async (c) => {
-    const { results } = await c.env.DB.prepare(`
+    const db = getDatabase(c);
+    const { results } = await db.prepare(`
       SELECT * FROM license_types 
       WHERE is_active = true 
       ORDER BY name ASC
@@ -105,7 +115,9 @@ licenseRoutes.post('/license-types',
   zValidator('json', LicenseTypeSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const user = c.get('user');
+    const user = c.get('user' as any);
+    
+    const db = getDatabase(c);
     
     const licenseType = {
       name: data.name,
@@ -122,7 +134,7 @@ licenseRoutes.post('/license-types',
       updated_at: new Date().toISOString(),
     };
     
-    const result = await c.env.DB.prepare(`
+    const result = await db.prepare(`
       INSERT INTO license_types (
         name, description, features, max_users, max_api_calls_per_month,
         has_personalization, has_byok_support, price_monthly, price_annual,
@@ -154,7 +166,7 @@ licenseRoutes.post('/license-types',
 licenseRoutes.get('/licenses',
   licenseMiddleware(),
   async (c) => {
-    const user = c.get('user');
+    const user = c.get('user' as any);
     const page = Number(c.req.query('page') || '1');
     const limit = Number(c.req.query('limit') || '10');
     const offset = (page - 1) * limit;
@@ -183,10 +195,11 @@ licenseRoutes.get('/licenses',
     query += ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
     params.push(limit.toString(), offset.toString());
     
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const db = getDatabase(c);
+    const { results } = await db.prepare(query).bind(...params).all();
     
     // Get total count
-    const countResult = await c.env.DB.prepare(`
+    const countResult = await db.prepare(`
       SELECT COUNT(*) as total
       FROM licenses l
       WHERE l.tenant_id = ?
@@ -199,7 +212,7 @@ licenseRoutes.get('/licenses',
         page,
         limit,
         total: countResult?.total || 0,
-        total_pages: Math.ceil((countResult?.total || 0) / limit)
+        total_pages: Math.ceil((Number(countResult?.total) || 0) / limit)
       }
     });
   }
@@ -210,7 +223,9 @@ licenseRoutes.post('/licenses',
   zValidator('json', CreateLicenseSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const user = c.get('user');
+    const user = c.get('user' as any);
+    
+    const db = getDatabase(c);
     
     const license = {
       license_key: generateLicenseKey(),
@@ -226,7 +241,7 @@ licenseRoutes.post('/licenses',
       updated_at: new Date().toISOString(),
     };
     
-    const result = await c.env.DB.prepare(`
+    const result = await db.prepare(`
       INSERT INTO licenses (
         license_key, license_type_id, tenant_id, user_id, status,
         starts_at, expires_at, max_usage_count, metadata, created_at, updated_at
@@ -247,7 +262,7 @@ licenseRoutes.post('/licenses',
     
     // Create user license assignment if user_id is provided
     if (data.user_id) {
-      await c.env.DB.prepare(`
+      await db.prepare(`
         INSERT INTO user_licenses (user_id, license_id, assigned_at, assigned_by, is_primary)
         VALUES (?, ?, ?, ?, ?)
       `).bind(
@@ -270,9 +285,10 @@ licenseRoutes.get('/licenses/:id',
   licenseMiddleware(),
   async (c) => {
     const licenseId = c.req.param('id');
-    const user = c.get('user');
+    const user = c.get('user' as any);
     
-    const { results } = await c.env.DB.prepare(`
+    const db = getDatabase(c);
+    const { results } = await db.prepare(`
       SELECT l.*, lt.name as license_type_name, lt.features, lt.max_api_calls_per_month
       FROM licenses l
       JOIN license_types lt ON l.license_type_id = lt.id
@@ -293,7 +309,9 @@ licenseRoutes.put('/api/licenses/:id',
   async (c) => {
     const licenseId = c.req.param('id');
     const data = c.req.valid('json');
-    const user = c.get('user');
+    const user = c.get('user' as any);
+    
+    const db = getDatabase(c);
     
     const updates = [];
     const params = [];
@@ -318,7 +336,7 @@ licenseRoutes.put('/api/licenses/:id',
     
     params.push(licenseId, user.tenant_id);
     
-    const result = await c.env.DB.prepare(`
+    const result = await db.prepare(`
       UPDATE licenses 
       SET ${updates.join(', ')}
       WHERE id = ? AND tenant_id = ?
@@ -329,7 +347,7 @@ licenseRoutes.put('/api/licenses/:id',
     }
     
     // Record in subscription history
-    await c.env.DB.prepare(`
+    await db.prepare(`
       INSERT INTO subscription_history (license_id, action, changed_by, created_at)
       VALUES (?, ?, ?, ?)
     `).bind(licenseId, data.status || 'updated', user.id, new Date().toISOString()).run();
@@ -344,10 +362,12 @@ licenseRoutes.post('/byok-config',
   zValidator('json', BYOKConfigSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const user = c.get('user');
+    const user = c.get('user' as any);
     
     // Encrypt API key (in production, use proper encryption)
     const encryptedKey = btoa(data.api_key); // Simple base64 encoding for demo
+    
+    const db = getDatabase(c);
     
     const config = {
       user_id: user.id,
@@ -360,7 +380,7 @@ licenseRoutes.post('/byok-config',
       updated_at: new Date().toISOString(),
     };
     
-    const result = await c.env.DB.prepare(`
+    const result = await db.prepare(`
       INSERT INTO byok_configs (
         user_id, provider, api_key_encrypted, model_preferences,
         max_usage_count, is_active, created_at, updated_at
@@ -386,9 +406,10 @@ licenseRoutes.post('/byok-config',
 licenseRoutes.get('/byok-config',
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.BYOK_SUPPORT] }),
   async (c) => {
-    const user = c.get('user');
+    const user = c.get('user' as any);
     
-    const { results } = await c.env.DB.prepare(`
+    const db = getDatabase(c);
+    const { results } = await db.prepare(`
       SELECT id, user_id, provider, model_preferences, max_usage_count,
              usage_count, is_active, created_at, updated_at
       FROM byok_configs
@@ -406,7 +427,9 @@ licenseRoutes.post('/personalization',
   zValidator('json', PersonalizationSettingsSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const user = c.get('user');
+    const user = c.get('user' as any);
+    
+    const db = getDatabase(c);
     
     const settings = {
       user_id: user.id,
@@ -424,13 +447,13 @@ licenseRoutes.post('/personalization',
     };
     
     // Check if settings already exist
-    const existing = await c.env.DB.prepare(`
+    const existing = await db.prepare(`
       SELECT id FROM personalization_settings WHERE user_id = ?
     `).bind(user.id).first();
     
     if (existing) {
       // Update existing settings
-      await c.env.DB.prepare(`
+      await db.prepare(`
         UPDATE personalization_settings 
         SET preferences = ?, child_profiles = ?, content_filters = ?, 
             ai_settings = ?, updated_at = ?
@@ -447,7 +470,7 @@ licenseRoutes.post('/personalization',
       return c.json({ success: true, message: 'Personalization settings updated' });
     } else {
       // Create new settings
-      const result = await c.env.DB.prepare(`
+      const result = await db.prepare(`
         INSERT INTO personalization_settings (
           user_id, preferences, child_profiles, content_filters,
           ai_settings, created_at, updated_at
@@ -473,9 +496,10 @@ licenseRoutes.post('/personalization',
 licenseRoutes.get('/personalization',
   licenseMiddleware({ requiredFeatures: [LicenseFeatures.PERSONALIZATION] }),
   async (c) => {
-    const user = c.get('user');
+    const user = c.get('user' as any);
     
-    const { results } = await c.env.DB.prepare(`
+    const db = getDatabase(c);
+    const { results } = await db.prepare(`
       SELECT id, user_id, preferences, child_profiles, content_filters,
              ai_settings, created_at, updated_at
       FROM personalization_settings
@@ -494,12 +518,14 @@ licenseRoutes.get('/personalization',
 licenseRoutes.get('/usage-stats',
   licenseMiddleware(),
   async (c) => {
-    const user = c.get('user');
-    const license = c.get('license');
+    const user = c.get('user' as any);
+    const license = c.get('license' as any);
+    
+    const db = getDatabase(c);
     
     // Get current month's API usage
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const { results: apiUsageResults } = await c.env.DB.prepare(`
+    const { results: apiUsageResults } = await db.prepare(`
       SELECT COUNT(*) as total_calls,
              COUNT(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 END) as successful_calls,
              AVG(response_time_ms) as avg_response_time

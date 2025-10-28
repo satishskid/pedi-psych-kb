@@ -9,18 +9,95 @@ import type { User, Tenant } from '@pedi-psych/shared';
 import licenseRoutes from './routes/licenses';
 import contentRoutes from './routes/content';
 import adminRoutes from './routes/admin';
-import { licenseMiddleware } from './middleware/license';
+import { licenseMiddleware, trackAPIUsage } from './middleware/license';
 import { apiUsageMiddleware } from './middleware/api-usage';
+
+// Helper function to get database binding
+function getDatabase(c: any) {
+  const db = c.env.DB || c.env.DB_PROD;
+  if (!db) {
+    throw new Error('Database binding not found');
+  }
+  return db;
+}
+
+// Google OAuth configuration
+const GOOGLE_REDIRECT_URI = 'https://pedi-app-prod.devadmin-27f.workers.dev/api/auth/google/callback';
 
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
   REGION_DEFAULT: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  [key: string]: any; // Index signature for compatibility
 }
 
-const app = new Hono<{ Bindings: Env }>();
+export type Variables = {
+  user: User;
+  jwtPayload: any;
+  license?: any;
+};
+
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 app.use('/*', cors());
+
+// Health check endpoint
+app.get('/api/health', async (c) => {
+  try {
+    const db = getDatabase(c);
+
+    // Test database connection
+    const result = await db.prepare('SELECT 1 as test').first();
+    
+    return c.json({ 
+      status: 'healthy', 
+      database: result ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    return c.json({ 
+      status: 'unhealthy', 
+      database: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+// Test user creation endpoint (for development only)
+app.post('/api/test/create-user', async (c) => {
+  try {
+    const { email, name, role = 'parent' } = await c.req.json();
+    const now = new Date().toISOString();
+    const passwordHash = 'demo123';
+    const tenantId = '1';
+
+    console.log('Creating test user:', { email, name, role });
+
+    const db = getDatabase(c);
+
+    const result = await db.prepare(`
+      INSERT INTO users (email, password_hash, name, role, tenant_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(email, passwordHash, name, role, tenantId, now, now).run();
+
+    console.log('Insert result:', result);
+
+    // Get the created user
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?')
+      .bind(email)
+      .first();
+
+    console.log('Created user:', user);
+
+    return c.json(user);
+  } catch (error) {
+    console.error('Test user creation error:', error);
+    return c.json({ error: 'Failed to create test user', details: error.message }, 500);
+  }
+});
 
 // Login endpoint (no JWT required) - place before JWT middleware
 const LoginSchema = z.object({
@@ -32,50 +109,60 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
   try {
     const { email, password } = c.req.valid('json');
     
-    // Admin login (for demo purposes)
-    if (email === 'admin@example.com' && password === 'demo123') {
-      const adminUser = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?')
-        .bind('admin@example.com')
-        .first();
-      
-      if (adminUser) {
-        const token = await sign({
-          userId: adminUser.id.toString(),
-          email: adminUser.email,
-          name: adminUser.name,
-          role: adminUser.role,
-          tenantId: adminUser.tenant_id,
-          createdAt: adminUser.created_at
-        }, c.env.JWT_SECRET);
-        
-        return c.json({
-          token,
-          user: adminUser
-        });
-      }
-    }
-    
-    // Check against stored users (for non-admin users)
-    const userResult = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?')
+    // Check against stored users
+    const db = getDatabase(c);
+
+    const userResult = await db.prepare('SELECT * FROM users WHERE email = ?')
       .bind(email)
       .first();
     
     if (userResult) {
-      const user = userResult as User;
-      // In a real app, verify password hash
-      if (password === 'demo123') { // Demo password
+      const user = userResult as unknown as User;
+      // For demo purposes, accept password123 for all seeded users
+      if (password === 'password123') {
+        
+        // Simple license check - check if user has an active license
+        let licenseStatus = 'active'; // Default for demo
+        let licenseType = 'basic';
+        
+        try {
+          const licenseResult = await db.prepare(`
+            SELECT l.*, lt.name as license_type_name 
+            FROM user_licenses ul
+            JOIN licenses l ON ul.license_id = l.id  
+            JOIN license_types lt ON l.license_type_id = lt.id
+            WHERE ul.user_id = ? AND l.status = 'active' AND l.expires_at > datetime('now')
+            ORDER BY ul.is_primary DESC
+            LIMIT 1
+          `).bind(user.id).first();
+          
+          if (licenseResult) {
+            licenseStatus = licenseResult.status as string;
+            licenseType = licenseResult.license_type_name as string;
+          }
+        } catch (licenseError) {
+          console.log('License check failed, using defaults:', licenseError);
+          // Continue with defaults - don't block login for license issues
+        }
+        
         const token = await sign({
-          userId: user.id.toString(), // Convert to string for consistency
+          userId: user.id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
           tenantId: user.tenant_id,
-          createdAt: user.created_at
+          createdAt: user.created_at,
+          licenseStatus,
+          licenseType
         }, c.env.JWT_SECRET);
         
         return c.json({
           token,
-          user: user
+          user: {
+            ...user,
+            license_status: licenseStatus,
+            license_type: licenseType
+          }
         });
       }
     }
@@ -87,59 +174,212 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
   }
 });
 
+// Google OAuth endpoints
+app.get('/api/auth/google', async (c) => {
+  const clientId = c.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    return c.json({ error: 'Google OAuth not configured' }, 501);
+  }
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${GOOGLE_REDIRECT_URI}&response_type=code&scope=email profile&access_type=offline&prompt=consent`;
+  return c.redirect(googleAuthUrl);
+});
+
+app.get('/api/auth/google/callback', async (c) => {
+  try {
+    const clientId = c.env.GOOGLE_CLIENT_ID;
+    const clientSecret = c.env.GOOGLE_CLIENT_SECRET;
+    
+    if (!clientId || !clientSecret) {
+      return c.redirect('https://d29ad10a.pedi-psych-kb-frontend.pages.dev/login?error=google_not_configured');
+    }
+
+    const code = c.req.query('code');
+    if (!code) {
+      return c.json({ error: 'No authorization code provided' }, 400);
+    }
+
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code,
+        grant_type: 'authorization_code',
+        redirect_uri: GOOGLE_REDIRECT_URI,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new Error('Failed to exchange code for token');
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // Get user info from Google
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userResponse.ok) {
+      throw new Error('Failed to get user info from Google');
+    }
+
+    const googleUser = await userResponse.json();
+    const email = googleUser.email;
+    const name = googleUser.name;
+
+    // Check if user exists in database
+    const db = getDatabase(c);
+    let user = await db.prepare('SELECT * FROM users WHERE email = ?')
+      .bind(email)
+      .first();
+
+    if (!user) {
+      // Create new user if doesn't exist
+      const now = new Date().toISOString();
+      const role = 'parent'; // Default role for Google users
+      const tenantId = '1'; // Default tenant
+      const passwordHash = 'google_oauth'; // Placeholder for Google users
+
+      await db.prepare(`
+        INSERT INTO users (email, password_hash, name, role, tenant_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(email, passwordHash, name, role, tenantId, now, now).run();
+
+      user = await db.prepare('SELECT * FROM users WHERE email = ?')
+        .bind(email)
+        .first();
+    }
+
+    // Generate JWT token
+    const token = await sign({
+      userId: user.id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tenantId: user.tenant_id,
+      createdAt: user.created_at,
+    }, c.env.JWT_SECRET);
+
+    // Redirect back to frontend with token
+    const frontendUrl = 'https://d29ad10a.pedi-psych-kb-frontend.pages.dev';
+    return c.redirect(`${frontendUrl}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
+
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    return c.redirect('https://d29ad10a.pedi-psych-kb-frontend.pages.dev/login?error=google_auth_failed');
+  }
+});
+
 // Apply JWT middleware to all /api/* routes EXCEPT /api/auth/login
 app.use('/api/*', async (c, next) => {
   // Skip JWT for login endpoint
   if (c.req.path === '/api/auth/login') {
-    return next();
+    await next();
+    return;
   }
   
-  const jwtMiddleware = jwt({
+  if (!c.env?.JWT_SECRET) {
+    return c.json({ error: 'JWT secret not configured' }, 500);
+  }
+  
+  // Apply JWT middleware
+  return jwt({
     secret: c.env.JWT_SECRET,
-  });
-  return jwtMiddleware(c, next);
+  })(c, next);
 });
 
 // Convert JWT payload to user object for license middleware
 app.use('/api/*', async (c, next) => {
   // Skip for login endpoint
   if (c.req.path === '/api/auth/login') {
-    return next();
+    await next();
+    return;
   }
   
   console.log('=== USER CONVERSION MIDDLEWARE STARTED ===');
-  const jwtPayload = c.get('jwtPayload');
+  
+  // Get the JWT payload from the context
+  const jwtPayload = c.get('jwtPayload' as any);
   console.log('JWT Payload:', jwtPayload);
   
   if (jwtPayload) {
     // Convert JWT payload to user object format expected by license middleware
-    const user = {
-      id: parseInt(jwtPayload.userId),
+    const user: User = {
+      id: jwtPayload.id, // JWT payload uses 'id' not 'userId'
       email: jwtPayload.email,
       name: jwtPayload.name,
       role: jwtPayload.role,
-      tenant_id: jwtPayload.tenantId
+      tenant_id: jwtPayload.tenantId,
+      created_at: jwtPayload.createdAt,
+      updated_at: new Date().toISOString()
     };
     console.log('Setting user object:', user);
-    c.set('user', user);
+    c.set('user' as any, user);
   } else {
     console.log('No JWT payload found');
   }
   
   console.log('=== USER CONVERSION MIDDLEWARE COMPLETED ===');
-  return next();
+  await next();
 });
 
-// Track API usage for all authenticated API calls
-app.use('/api/*', apiUsageMiddleware());
+// Track API usage for all authenticated API calls (simplified)
+app.use('/api/*', async (c, next) => {
+  // Skip for login endpoint
+  if (c.req.path === '/api/auth/login') {
+    await next();
+    return;
+  }
+  
+  const user = c.get('user' as any);
+  if (user) {
+    const startTime = Date.now();
+    try {
+      await next();
+      // Optional: Track successful API calls (non-blocking)
+      const responseTime = Date.now() - startTime;
+      const db = c.env?.DB || c.env?.DB_PROD;
+      if (db) {
+        trackAPIUsage(
+          db,
+          parseInt(user.id) || 0,
+          c.req.path,
+          c.req.method,
+          200,
+          responseTime
+        ).catch(() => {}); // Ignore tracking errors
+      }
+    } catch (error) {
+      // Don't track errors for now - just pass through
+      throw error;
+    }
+  } else {
+    await next();
+  }
+});
 
 // Debug endpoint to test user object
 app.get('/api/debug/user', async (c) => {
-  const user = c.get('user');
-  const jwtPayload = c.get('jwtPayload');
+  const user = c.get('user' as any);
+  let jwtPayload = c.get('jwtPayload' as any);
+  
+  // Try alternative keys if jwtPayload not found
+  if (!jwtPayload) {
+    jwtPayload = c.get('jwt' as any);
+  }
+  
   return c.json({
     user,
     jwtPayload,
+    allKeys: {
+      jwtPayload: c.get('jwtPayload' as any),
+      jwt: c.get('jwt' as any),
+      payload: c.get('payload' as any)
+    },
     timestamp: new Date().toISOString()
   });
 });
@@ -158,6 +398,12 @@ const CreateTenantSchema = z.object({
 
 app.post('/api/tenants', async (c) => {
   try {
+    // Use the correct database binding based on environment
+    const db = c.env.DB || c.env.DB_PROD;
+    if (!db) {
+      throw new Error('Database binding not found');
+    }
+
     const body = await c.req.json();
     const data = CreateTenantSchema.parse(body);
 
@@ -169,7 +415,7 @@ app.post('/api/tenants', async (c) => {
       updated_at: new Date().toISOString(),
     };
 
-    await c.env.DB.prepare(`
+    await db.prepare(`
       INSERT INTO tenants (id, name, region, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
     `).bind(
@@ -191,7 +437,8 @@ app.post('/api/tenants', async (c) => {
 
 app.get('/api/tenants', async (c) => {
   try {
-    const { results } = await c.env.DB.prepare('SELECT * FROM tenants ORDER BY created_at DESC').all();
+    const db = getDatabase(c);
+    const { results } = await db.prepare('SELECT * FROM tenants').all();
     return c.json(results);
   } catch (error) {
     return c.json({ error: 'Failed to fetch tenants' }, 500);
@@ -200,6 +447,7 @@ app.get('/api/tenants', async (c) => {
 
 app.post('/api/users', async (c) => {
   try {
+    const db = getDatabase(c);
     const body = await c.req.json();
     const data = CreateUserSchema.parse(body);
 
@@ -213,7 +461,7 @@ app.post('/api/users', async (c) => {
       updated_at: new Date().toISOString(),
     };
 
-    await c.env.DB.prepare(`
+    await db.prepare(`
       INSERT INTO users (id, email, name, role, tenant_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).bind(
@@ -237,9 +485,10 @@ app.post('/api/users', async (c) => {
 
 app.get('/api/users', async (c) => {
   try {
+    const db = getDatabase(c);
     const user = c.get('user');
     console.log('Users endpoint - User object:', user);
-    const { results } = await c.env.DB.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
+    const { results } = await db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
     return c.json(results);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -249,8 +498,9 @@ app.get('/api/users', async (c) => {
 
 app.get('/api/users/:id', async (c) => {
   try {
+    const db = getDatabase(c);
     const userId = c.req.param('id');
-    const { results } = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?')
+    const { results } = await db.prepare('SELECT * FROM users WHERE id = ?')
       .bind(userId)
       .all();
     
@@ -266,8 +516,13 @@ app.get('/api/users/:id', async (c) => {
 
 app.get('/api/assessments', async (c) => {
   try {
-    const userId = c.get('jwtPayload').sub;
-    const { results } = await c.env.DB.prepare(`
+    const db = getDatabase(c);
+    const jwtPayload = c.get('jwtPayload' as any);
+    const userId = jwtPayload?.sub;
+    if (!userId) {
+      return c.json({ error: 'User ID not found in token' }, 401);
+    }
+    const { results } = await db.prepare(`
       SELECT a.*, c.title, c.description
       FROM assessments a
       JOIN cards c ON a.card_id = c.id
@@ -283,13 +538,18 @@ app.get('/api/assessments', async (c) => {
 
 app.post('/api/assessments', async (c) => {
   try {
-    const userId = c.get('jwtPayload').sub;
+    const db = getDatabase(c);
+    const jwtPayload = c.get('jwtPayload' as any);
+    const userId = jwtPayload?.sub;
+    if (!userId) {
+      return c.json({ error: 'User ID not found in token' }, 401);
+    }
     const body = await c.req.json();
     
     const assessmentId = crypto.randomUUID();
     const now = new Date().toISOString();
     
-    await c.env.DB.prepare(`
+    await db.prepare(`
       INSERT INTO assessments (id, user_id, card_id, responses, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `).bind(

@@ -6,7 +6,8 @@ import {
   Bookmark, Download, Share2, Eye, Clock, User, Tag,
   ArrowLeft, Menu, X, Star, Heart, Users, FileText 
 } from 'lucide-react'
-import { Card } from '@pedi-psych/shared'
+import { Card as UICard } from '../components/ui/card'
+// Note: Card interface is defined locally to match API schema
 
 interface BookChapter {
   id: string
@@ -14,6 +15,30 @@ interface BookChapter {
   description: string
   icon: React.ElementType
   sections: BookSection[]
+}
+
+interface BookSection {
+  id: string
+  title: string
+  cards: Card[]
+  estimatedReadTime: number
+}
+
+interface Card {
+  id: string
+  title: Record<string, string>
+  description: Record<string, string>
+  content: Record<string, any>
+  category: string
+  tags: string[]
+  target_roles: string[]
+  languages: string[]
+  rtl_languages?: string[]
+  access_level?: string
+  role_permissions?: string[]
+  metadata?: Record<string, any>
+  created_at: string
+  updated_at: string
 }
 
 interface BookSection {
@@ -49,9 +74,80 @@ const BookMode: React.FC = () => {
   const isRTL = i18n.language === 'ar'
   const filter = searchParams.get('filter') || 'all'
 
-  // Mock book structure based on user role
-  const getBookStructure = () => {
-    const baseChapters: BookChapter[] = [
+  // Fetch book structure from API
+  const fetchBookStructure = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/content/book-structure?language=${i18n.language}&role=${filter}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch book structure');
+      }
+      
+      const data = await response.json();
+      
+      // Map icon names to actual icon components
+      const iconMap: Record<string, React.ElementType> = {
+        'BookOpen': BookOpen,
+        'Search': Search,
+        'TrendingUp': TrendingUp,
+        'FileText': FileText,
+        'Users': Users,
+        'Heart': Heart,
+        'Star': Star
+      };
+      
+      // Transform API data to match our interface
+      const transformedChapters: BookChapter[] = data.chapters.map((chapter: any) => ({
+        ...chapter,
+        icon: iconMap[chapter.icon] || BookOpen,
+        sections: chapter.sections.map((section: any) => ({
+          ...section,
+          cards: section.cards.map((card: any) => ({
+            ...card,
+            // Ensure all required fields are present
+            title: card.title || { en: 'Untitled', ar: 'بدون عنوان', fr: 'Sans titre', es: 'Sin título' },
+            description: card.description || { 
+              en: 'No description available', 
+              ar: 'لا توجد وصف متاح', 
+              fr: 'Aucune description disponible', 
+              es: 'No hay descripción disponible' 
+            },
+            content: card.content || { 
+              en: 'Content not available', 
+              ar: 'المحتوى غير متاح', 
+              fr: 'Contenu non disponible', 
+              es: 'Contenido no disponible' 
+            },
+            category: card.category || 'general',
+            tags: card.tags || [],
+            metadata: card.metadata || {},
+            access_level: card.access_level || 'public',
+            role_permissions: card.role_permissions || [],
+            created_at: card.created_at || new Date().toISOString(),
+            updated_at: card.updated_at || new Date().toISOString()
+          }))
+        }))
+      }));
+      
+      setChapters(transformedChapters);
+    } catch (error) {
+      console.error('Error fetching book structure:', error);
+      // Fallback to mock data if API fails
+      setChapters(getMockBookStructure());
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Mock book structure as fallback
+  const getMockBookStructure = (): BookChapter[] => {
+    return [
       {
         id: 'foundations',
         title: 'Foundations of Pediatric Behavioral Health',
@@ -67,119 +163,29 @@ const BookMode: React.FC = () => {
                 title: { en: 'Understanding Normal Development', ar: 'فهم التطور الطبيعي', hi: 'सामान्य विकास की समझ' },
                 description: { en: 'Comprehensive guide to normal child development milestones', ar: 'دليل شامل لمراحل التطور الطبيعي للطفل', hi: 'सामान्य बाल विकास मील के पत्थरों की व्यापक मार्गदर्शिका' },
                 content: { 
-                  en: 'Comprehensive guide to normal child development milestones...', 
-                  ar: 'دليل شامل لمراحل التطور الطبيعي للطفل...', 
-                  hi: 'सामान्य बाल विकास मील के पत्थरों की व्यापक मार्गदर्शिका...' 
+                  en: 'Comprehensive guide to normal child development milestones including physical, cognitive, social, and emotional development stages from infancy through adolescence.', 
+                  ar: 'دليل شامل لمراحل التطور الطبيعي للطفل بما في ذلك المراحل الجسدية والمعرفية والاجتماعية والعاطفية من الرضاعة حتى المراهقة.', 
+                  hi: 'सामान्य बाल विकास मील के पत्थरों की व्यापक मार्गदर्शिका जिसमें शिशु अवस्था से किशोरावस्था तक शारीरिक, संज्ञानात्मक, सामाजिक और भावनात्मक विकास चरण शामिल हैं।' 
                 },
                 category: 'development',
-                tags: ['development', 'milestones', 'normal'],
-                target_roles: ['clinician', 'parent', 'educator'],
-                languages: ['en', 'ar', 'hi'],
-                rtl_languages: ['ar'],
-                created_at: '2024-01-01',
-                updated_at: '2024-01-01'
+                tags: ['development', 'milestones', 'assessment'],
+                metadata: { age_range: { min: 0, max: 18 }, difficulty_level: 'beginner' },
+                access_level: 'public',
+                role_permissions: ['doctor', 'therapist', 'educator', 'parent'],
+                created_at: '2024-01-01T00:00:00Z',
+                updated_at: '2024-01-01T00:00:00Z'
               }
             ],
             estimatedReadTime: 15
           }
         ]
-      },
-      {
-        id: 'conditions',
-        title: 'Common Behavioral Conditions',
-        description: 'Evidence-based information on frequent behavioral and emotional challenges',
-        icon: Heart,
-        sections: [
-          {
-            id: 'anxiety-disorders',
-            title: 'Anxiety Disorders in Children',
-            cards: [
-              {
-                id: 'anx-001',
-                title: { en: 'Recognizing Childhood Anxiety', ar: 'التعرف على القلق في الطفولة', hi: 'बचपन की चिंचिता को पहचानना' },
-                description: { en: 'Signs and symptoms of anxiety in children across different age groups', ar: 'علامات وأعراض القلق عند الأطفال في مختلف الفئات العمرية', hi: 'विभिन्न आयु समूहों में बच्चों की चिंता के संकेत और लक्षण' },
-                content: { 
-                  en: 'Signs and symptoms of anxiety in children across different age groups...', 
-                  ar: 'علامات وأعراض القلق عند الأطفال في مختلف الفئات العمرية...', 
-                  hi: 'विभिन्न आयु समूहों में बच्चों की चिंता के संकेत और लक्षण...' 
-                },
-                category: 'anxiety',
-                tags: ['anxiety', 'recognition', 'symptoms'],
-                target_roles: ['clinician', 'parent', 'educator'],
-                languages: ['en', 'ar', 'hi'],
-                rtl_languages: ['ar'],
-                created_at: '2024-01-02',
-                updated_at: '2024-01-02'
-              }
-            ],
-            estimatedReadTime: 20
-          }
-        ]
-      },
-      {
-        id: 'interventions',
-        title: 'Evidence-Based Interventions',
-        description: 'Proven strategies and techniques for supporting behavioral health',
-        icon: Users,
-        sections: [
-          {
-            id: 'cbt-techniques',
-            title: 'Cognitive Behavioral Techniques',
-            cards: [
-              {
-                id: 'cbt-001',
-                title: { en: 'CBT for Childhood Anxiety', ar: 'العلاج المعرفي السلوكي لقلق الطفولة', hi: 'बचपन की चिंता के लिए सीबीटी' },
-                description: { en: 'Step-by-step CBT techniques adapted for children', ar: 'تقنيات العلاج المعرفي السلوكي خطوة بخطوة المعدلة للأطفال', hi: 'बच्चों के लिए अनुकूलित चरणबद्ध सीबीटी तकनीकें' },
-                content: { 
-                  en: 'Step-by-step CBT techniques adapted for children...', 
-                  ar: 'تقنيات العلاج المعرفي السلوكي خطوة بخطوة المعدلة للأطفال...', 
-                  hi: 'बच्चों के लिए अनुकूलित चरणबद्ध सीबीटी तकनीकें...' 
-                },
-                category: 'intervention',
-                tags: ['cbt', 'anxiety', 'techniques'],
-                target_roles: ['clinician', 'therapist'],
-                languages: ['en', 'ar', 'hi'],
-                rtl_languages: ['ar'],
-                created_at: '2024-01-03',
-                updated_at: '2024-01-03'
-              }
-            ],
-            estimatedReadTime: 25
-          }
-        ]
       }
-    ]
-
-    return baseChapters
-  }
+    ];
+  };
 
   useEffect(() => {
-    // Simulate loading book structure
-    const loadBookData = async () => {
-      setLoading(true)
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        const bookStructure = getBookStructure()
-        setChapters(bookStructure)
-        
-        // Set initial chapter based on filter
-        if (filter !== 'all') {
-          const filteredChapter = bookStructure.find(chapter => 
-            chapter.id === filter || chapter.sections.some(section => section.id.includes(filter))
-          )
-          if (filteredChapter) {
-            setSelectedChapter(filteredChapter)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load book data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadBookData()
-  }, [filter])
+    fetchBookStructure();
+  }, [filter, i18n.language])
 
   const handleChapterSelect = (chapter: BookChapter) => {
     setSelectedChapter(chapter)
@@ -642,7 +648,7 @@ const BookMode: React.FC = () => {
                       {selectedCard.description && (
                         <div className="bg-gray-50 p-6 rounded-lg">
                           <h3 className="text-lg font-semibold text-gray-900 mb-3">Overview</h3>
-                          <p className="text-gray-700">{selectedCard.description}</p>
+                          <p className="text-gray-700">{selectedCard.description[i18n.language as keyof typeof selectedCard.description] || selectedCard.description.en}</p>
                         </div>
                       )}
                     </div>

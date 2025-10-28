@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { useUser } from '@clerk/clerk-react'
 import { 
   Search, BookOpen, MessageCircle, Users, FileText, Heart, 
   TrendingUp, Clock, Star, AlertCircle, CheckCircle, 
   Calendar, Download, Eye, Filter, Plus, Edit, Settings 
 } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
 import { Card } from '@pedi-psych/shared'
 
 interface DashboardStats {
@@ -33,7 +33,7 @@ interface RecentActivity {
 
 const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation()
-  const { user } = useAuth()
+  const { user: clerkUser, isLoaded } = useUser()
   const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats>({
     totalCards: 0,
@@ -46,6 +46,15 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true)
 
   const isRTL = i18n.language === 'ar'
+
+  // Create a user object compatible with the existing role-based logic
+  const user = clerkUser ? {
+    id: clerkUser.id,
+    email: clerkUser.primaryEmailAddress?.emailAddress || '',
+    name: clerkUser.fullName || clerkUser.username || 'User',
+    role: 'clinician', // Default role, you can customize this based on Clerk metadata
+    tenant_id: 'default'
+  } : null
 
   // Role-specific content and actions
   const getRoleSpecificContent = () => {
@@ -244,15 +253,58 @@ const Dashboard: React.FC = () => {
     }
   }
 
-  const content = getRoleSpecificContent()
+  // Memoize content to prevent recalculation on every render
+  const content = React.useMemo(() => getRoleSpecificContent(), [user?.role])
+
+  // Debug: Log re-renders with more detail
+  React.useEffect(() => {
+    console.log('🔄 Dashboard re-render:', { 
+      isLoaded, 
+      loading, 
+      userRole: user?.role, 
+      statsTotalCards: stats.totalCards,
+      recentActivityLength: recentActivity.length,
+      contentStatsLength: content.stats.length,
+      timestamp: new Date().toISOString()
+    })
+  })
+
+  // Debug: Log user role changes
+  React.useEffect(() => {
+    console.log('👤 User role changed:', user?.role, 'at', new Date().toISOString())
+  }, [user?.role])
+
+  // Debug: Log loading state changes
+  React.useEffect(() => {
+    console.log('⏳ Loading state changed:', loading, 'at', new Date().toISOString())
+  }, [loading])
+
+  // Log when user role changes
+  React.useEffect(() => {
+    console.log('User role changed:', user?.role)
+  }, [user?.role])
+
+  // Log loading state changes
+  React.useEffect(() => {
+    console.log('Loading state changed:', loading)
+  }, [loading])
 
   useEffect(() => {
-    // Simulate loading dashboard data
+    // Only load data if Clerk has loaded and user is available
+    if (!isLoaded || !user) return;
+
+    // Use a flag to track if this is the initial load
+    const isInitialLoad = stats.totalCards === 0;
+    
     const loadDashboardData = async () => {
-      setLoading(true)
+      // Only show loading state on initial load
+      if (isInitialLoad) {
+        setLoading(true)
+      }
+      
       try {
-        // Simulate API calls
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Simulate API calls with shorter timeout
+        await new Promise(resolve => setTimeout(resolve, 150))
         
         // Set mock data based on role
         setStats({
@@ -286,12 +338,15 @@ const Dashboard: React.FC = () => {
       } catch (error) {
         console.error('Failed to load dashboard data:', error)
       } finally {
-        setLoading(false)
+        // Only hide loading if this was the initial load
+        if (isInitialLoad) {
+          setLoading(false)
+        }
       }
     }
 
     loadDashboardData()
-  }, [user?.role, content.stats])
+  }, [user?.role, isLoaded, content]) // Removed stats.totalCards to prevent loop
 
   const getActivityIcon = (type: RecentActivity['type']) => {
     switch (type) {
@@ -303,16 +358,41 @@ const Dashboard: React.FC = () => {
     }
   }
 
-  if (loading) {
+  // Show single consolidated loading state
+  if (!isLoaded || loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {!isLoaded ? 'Loading user data...' : 'Loading dashboard...'}
+          </p>
+          {/* Debug info visible in UI */}
+          <div className="mt-4 text-xs text-gray-500 font-mono">
+            <div>isLoaded: {isLoaded ? 'true' : 'false'}</div>
+            <div>loading: {loading ? 'true' : 'false'}</div>
+            <div>user: {user ? user.role : 'null'}</div>
+            <div>stats.totalCards: {stats.totalCards}</div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={`space-y-8 ${isRTL ? 'rtl' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div key={user?.role} className={`space-y-8 ${isRTL ? 'rtl' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Debug section - remove this after testing */}
+      <div className="bg-yellow-100 border border-yellow-400 rounded-lg p-4 mb-4">
+        <h3 className="font-semibold text-yellow-800 mb-2">Debug Info (remove in production)</h3>
+        <div className="text-sm text-yellow-700 font-mono space-y-1">
+          <div>User Role: {user?.role || 'null'}</div>
+          <div>isLoaded: {isLoaded ? 'true' : 'false'}</div>
+          <div>loading: {loading ? 'true' : 'false'}</div>
+          <div>stats.totalCards: {stats.totalCards}</div>
+          <div>recentActivity.length: {recentActivity.length}</div>
+          <div>Content stats: {content.stats.length}</div>
+        </div>
+      </div>
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
         <h1 className="text-3xl font-bold mb-3">{content.welcomeTitle}</h1>

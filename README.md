@@ -1,94 +1,16 @@
-# Pediatric Psychology Knowledge Base
+# 🧠 Pediatric Psychiatry Knowledge Base System
 
-A comprehensive, multi-tenant knowledge base system for pediatric psychology with internationalization support, role-based access control, and export capabilities.
+A comprehensive, role-based knowledge management system for pediatric psychiatry with advanced AI personalization, BYOK support, and multi-tenant architecture.
 
-## 🌟 Features
+## 🚀 **Quick Start**
 
-- **Multi-tenant Architecture**: Support for multiple organizations with complete data isolation
-- **Internationalization**: Full i18n support with English, Hindi, and Arabic languages
-- **Right-to-Left (RTL) Support**: Proper RTL text rendering and layout for Arabic content
-- **Role-Based Access Control (RBAC)**: Granular permissions system with customizable policies
-- **Export Capabilities**: Export knowledge base content to HTML and PDF formats
-- **Modern Web Interface**: React-based frontend with Tailwind CSS and responsive design
-- **Cloud-Native**: Built on Cloudflare Workers for global scalability
-- **Type Safety**: Full TypeScript implementation with Zod validation
-
-## ✅ Recent Fixes & Improvements
-
-### TypeScript Configuration
-- ✅ Fixed TypeScript configuration issues across all packages
-- ✅ Added proper type definitions for Node.js and Cloudflare Workers
-- ✅ Resolved implicit `any` type errors
-- ✅ Updated `tsconfig.json` files with proper compiler options
-
-### Dependency Management
-- ✅ Added missing dependencies to `ops-api`:
-  - `@hono/zod-validator` for request validation
-  - `zod` for schema validation
-  - `@types/node` for Node.js types
-- ✅ Updated shared package build configuration
-- ✅ Fixed module resolution issues
-
-### Code Quality
-- ✅ Fixed type mismatches between shared package and applications
-- ✅ Updated field names to match shared package interfaces:
-  - `tenantId` → `tenant_id`
-  - `createdAt` → `created_at`
-  - `updatedAt` → `updated_at`
-- ✅ Updated policy structure to use arrays:
-  - `resource` → `resources[]`
-  - `action` → `actions[]`
-  - Added `effect` field for allow/deny policies
-
-### API Improvements
-- ✅ Enhanced RBAC (Role-Based Access Control) system
-- ✅ Improved tenant isolation in policy management
-- ✅ Fixed export functionality type issues
-- ✅ Updated policy evaluation logic
-
-## 🏗️ Architecture
-
-### Backend Services
-
-1. **kb-api**: Main knowledge base API (Port 8787)
-   - Card management (CRUD operations)
-   - Search functionality
-   - Tenant isolation
-
-2. **app-api**: Application API (Port 8788)
-   - User management
-   - Authentication & JWT tokens
-   - Tenant management
-
-3. **ops-api**: Operations API (Port 8789)
-   - Policy management
-   - RBAC evaluation
-   - Export services
-
-### Frontend
-
-- **React 18** with TypeScript
-- **React Router** for navigation
-- **Tailwind CSS** for styling
-- **i18next** for internationalization
-- **Lucide React** for icons
-
-### Database
-
-- **Cloudflare D1** (SQLite) for production
-- **SQLite** with better-sqlite3 for development
-- **Cloudflare KV** for policy storage
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+ 
+### **Prerequisites**
+- Node.js 18+
 - npm or yarn
 - Cloudflare account (for deployment)
-- SQLite3 (for local development)
+- Wrangler CLI
 
-### Development Setup
+### **Installation**
 
 1. **Clone the repository**
    ```bash
@@ -96,245 +18,448 @@ A comprehensive, multi-tenant knowledge base system for pediatric psychology wit
    cd pedi-psych-kb
    ```
 
-2. **Run the setup script**
+2. **Install dependencies**
    ```bash
-   chmod +x scripts/setup-dev.sh
-   ./scripts/setup-dev.sh
+   npm install
    ```
 
-3. **Start development servers**
+3. **Set up Cloudflare D1 database**
    ```bash
-   ./dev-start.sh
-   ```
-
-4. **Access the application**
-   - Frontend: http://localhost:3000
-   - kb-api: http://localhost:8787
-   - app-api: http://localhost:8788
-   - ops-api: http://localhost:8789
-
-### Default Credentials
-
-After running the database seed script, you can login with:
-- **Email**: admin@example.com
-- **Password**: admin123
-
-## 📁 Project Structure
-
-```
-pedi-psych-kb/
-├── apps/
-│   ├── kb-api/           # Main knowledge base API
-│   ├── app-api/          # Application API (users, auth)
-│   ├── ops-api/          # Operations API (policies, exports)
-│   └── frontend/         # React frontend application
-├── packages/
-│   └── shared/           # Shared types and utilities
-├── database/
-│   ├── schema.sql        # Database schema
-│   ├── seed.sql          # Sample data
-│   └── seed.js           # Database seeding script
-├── scripts/
-│   ├── setup-dev.sh      # Development setup script
-│   └── deploy.sh         # Production deployment script
-└── .github/workflows/    # CI/CD pipelines
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-#### Frontend (.env)
-```env
-VITE_API_URL=http://localhost:8787
-VITE_APP_API_URL=http://localhost:8788
-VITE_OPS_API_URL=http://localhost:8789
-```
-
-#### Cloudflare Workers (wrangler.toml)
-```toml
-name = "pedi-psych-kb-api"
-main = "src/index.ts"
-compatibility_date = "2024-01-01"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "pedi-psych-kb"
-database_id = "your-database-id"
-
-[env.production.vars]
-JWT_SECRET = "your-jwt-secret"
-```
-
-### Database Setup
-
-The project uses SQLite for development and Cloudflare D1 for production.
-
-1. **Development Database**
-   ```bash
+   # Create database
    cd database
-   node seed.js
+   npm run db:create
+   
+   # Run migrations
+   npm run db:migrate
+   
+   # Seed demo data
+   npm run db:seed
    ```
 
-2. **Production Database**
-   - Create D1 database in Cloudflare dashboard
-   - Run schema.sql to create tables
-   - Run seed.sql to populate initial data
+4. **Configure environment**
+   ```bash
+   cp wrangler.toml.example wrangler.toml
+   # Edit wrangler.toml with your Cloudflare credentials
+   ```
 
-## 🌍 Internationalization
+5. **Start development servers**
+   ```bash
+   # Terminal 1: Start API server
+   cd apps/app-api
+   npm run dev
+   
+   # Terminal 2: Start frontend
+   cd apps/frontend
+   npm run dev
+   ```
 
-The application supports multiple languages with proper RTL support:
+6. **Access the application**
+   - **Frontend**: http://localhost:3000
+   - **API**: http://localhost:8787
+   - **Demo login**: `admin@example.com` / `password123`
 
-- **English** (LTR): Default language
-- **Hindi** (LTR): हिंदी
-- **Arabic** (RTL): العربية
+## 🎯 **System Overview**
 
-### Adding New Languages
+### **Core Features**
+- ✅ **Role-Based Access Control**: 5 user roles with appropriate content access
+- ✅ **Advanced AI Search**: BYOK-powered personalization with medical accuracy boundaries
+- ✅ **Comprehensive Knowledge Base**: 9 chapters covering pediatric behavioral health
+- ✅ **Multi-Language Support**: English and Arabic content
+- ✅ **Professional Tools**: Teleprompters, handouts, intervention plans
+- ✅ **License Management**: Flexible licensing with individual and organization tiers
 
-1. Add translations in `apps/frontend/src/i18n.ts`
-2. Update the language switcher in `Layout.tsx`
-3. Add RTL support if needed
+### **User Roles & Access**
+- **👑 Admin/CTO**: Full system access, user management, content administration
+- **👨‍⚕️ Doctor**: Complete clinical access, all content categories, patient resources
+- **👩‍⚕️ Therapist**: Therapeutic focus, session tools, intervention planning
+- **👨‍🏫 Educator**: Educational content, classroom strategies, student support
+- **👨‍👩‍👧‍👦 Parent**: Family-focused guidance, practical home strategies
 
-## 🔐 RBAC System
+## 🏗️ **Architecture**
 
-The role-based access control system allows granular permissions:
+### **Backend (Hono.js + Cloudflare Workers)**
+```
+apps/app-api/
+├── src/
+│   ├── index.ts              # Main application entry
+│   ├── middleware/
+│   │   ├── license.ts        # Simplified role-based middleware
+│   │   └── api-usage.ts      # Optional usage tracking
+│   └── routes/
+│       ├── content.ts        # Knowledge base & AI search
+│       ├── admin.ts          # User management
+│       └── licenses.ts       # License management
+```
 
-### Default Roles
+### **Frontend (React + TypeScript)**
+```
+apps/frontend/
+├── src/
+│   ├── components/           # Reusable UI components
+│   ├── pages/               # Route-specific pages
+│   ├── contexts/            # React contexts (Auth, etc.)
+│   └── i18n.ts             # Internationalization
+```
 
-- **Admin**: Full system access
-- **Editor**: Content management
-- **Viewer**: Read-only access
+### **Database Schema**
+```
+database/
+├── schema.sql              # Core tables (users, cards, tenants)
+├── license_schema.sql      # License management tables
+└── seed.sql               # Demo data
+```
 
-### Custom Policies
+## 🔧 **API Endpoints**
 
-Create custom policies via the ops-api:
-
-```json
+### **Authentication**
+```bash
+# Login
+POST /api/auth/login
 {
-  "name": "Custom Policy",
-  "description": "Allows specific actions",
-  "resource": "cards",
-  "action": "write",
-  "conditions": { "tenantId": 1 },
-  "tenantId": 1
+  "email": "admin@example.com",
+  "password": "password123"
 }
 ```
 
-## 📤 Export System
+### **Content Access**
+```bash
+# Browse knowledge base structure
+GET /api/content/book-structure
 
-Export knowledge base content in multiple formats:
+# Basic search
+POST /api/content/search
+{
+  "query": "anxiety management",
+  "limit": 10
+}
 
-### Supported Formats
+# Advanced AI-powered search
+POST /api/content/advanced-search
+{
+  "query": "My child has meltdowns at bedtime",
+  "context": {
+    "user_role": "parent",
+    "child_age": 8,
+    "conditions": ["behavioral"],
+    "severity": "moderate"
+  },
+  "response_type": "handout"
+}
+```
 
-- **HTML**: Responsive web pages with RTL support
-- **PDF**: Coming soon (currently generates HTML)
+### **BYOK Configuration**
+```bash
+# Configure AI provider
+POST /api/content/byok-config
+{
+  "provider": "gemini",
+  "api_key": "your-api-key",
+  "model_preferences": {
+    "model": "gemini-pro",
+    "temperature": 0.7
+  }
+}
 
-### Export Options
+# Get configurations
+GET /api/content/byok-config
+```
 
-- Language selection
-- Metadata inclusion
-- Custom templates
-- Batch export
+### **Admin Functions**
+```bash
+# Create user
+POST /api/users
+{
+  "email": "doctor@hospital.com",
+  "name": "Dr. Smith",
+  "role": "doctor"
+}
 
-## 🚀 Deployment
+# List users
+GET /api/admin/users
 
-### Prerequisites
+# System health
+GET /api/health
+```
 
-- Cloudflare account
-- Wrangler CLI installed
-- Environment variables configured
+## 🚀 **Deployment Options**
 
-### Production Deployment
+### **Option 1: Cloudflare Workers (Recommended)**
 
-1. **Configure environment variables**
-   ```bash
-   # Set your Cloudflare credentials
-   wrangler login
-   ```
+**Advantages:**
+- ✅ Serverless, global CDN
+- ✅ Automatic scaling
+- ✅ Built-in D1 database
+- ✅ Cost-effective for most use cases
 
-2. **Deploy all services**
-   ```bash
-   chmod +x scripts/deploy.sh
-   ./scripts/deploy.sh
-   ```
+**Setup:**
+```bash
+# 1. Configure Cloudflare
+npm install -g wrangler
+wrangler login
 
-3. **Configure Cloudflare services**
-   - Set up D1 database
-   - Create KV namespaces
-   - Configure environment variables
-   - Set up custom domains
+# 2. Create D1 database
+wrangler d1 create pedi-psych-kb-prod
 
-### CI/CD Pipeline
+# 3. Update wrangler.toml with database ID
+# 4. Deploy
+npm run deploy
+```
 
-The project includes GitHub Actions workflows for:
+### **Option 2: Docker Deployment**
 
-- **Continuous Integration**: Linting, type checking, security scanning
-- **Staging Deployment**: Automatic deployment on `develop` branch
-- **Production Deployment**: Automatic deployment on `main` branch
+**Advantages:**
+- ✅ Self-hosted control
+- ✅ Custom infrastructure
+- ✅ Enterprise compliance
 
-## 🔒 Security
+**Setup:**
+```bash
+# 1. Build Docker image
+docker build -t pedi-psych-kb .
 
-### Authentication
+# 2. Run with environment variables
+docker run -p 8787:8787 \
+  -e JWT_SECRET=your-secret \
+  -e DATABASE_URL=your-db-url \
+  pedi-psych-kb
+```
 
-- JWT-based authentication
-- Secure password hashing
-- Token expiration and refresh
+### **Option 3: Traditional VPS**
 
-### Authorization
+**Advantages:**
+- ✅ Full server control
+- ✅ Custom database setup
+- ✅ Predictable costs
 
-- Role-based access control
-- Tenant isolation
-- Resource-level permissions
+**Setup:**
+```bash
+# 1. Install Node.js 18+
+# 2. Clone repository
+# 3. Install dependencies
+# 4. Configure database
+# 5. Start with PM2
+pm2 start ecosystem.config.js
+```
 
-### Data Protection
+## 👥 **User Management**
 
-- Input validation with Zod
-- SQL injection prevention
-- XSS protection
-- HTTPS enforcement
+### **Creating Admin Users**
 
-## 📊 Monitoring
+1. **Database Method** (Initial Setup):
+```sql
+INSERT INTO users (email, password_hash, name, role, tenant_id, created_at, updated_at)
+VALUES (
+  'cto@yourorg.com',
+  'password123',  -- Use proper hashing in production
+  'CTO Name',
+  'admin',
+  1,
+  datetime('now'),
+  datetime('now')
+);
+```
 
-### Health Checks
+2. **API Method** (After Initial Setup):
+```bash
+curl -X POST -H "Authorization: Bearer ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newadmin@yourorg.com",
+    "name": "New Admin",
+    "role": "admin"
+  }' \
+  "https://your-domain.com/api/users"
+```
 
-All services include health check endpoints:
+### **Adding New Users (Admin Process)**
 
-- `GET /health` - Service health status
-- `GET /api/user/permissions` - User permissions
+**Via Web Interface:**
+1. Login as admin
+2. Navigate to Admin Panel → Users
+3. Click "Add New User"
+4. Fill in user details:
+   - Email address
+   - Full name
+   - Role (doctor, therapist, educator, parent)
+   - Organization/tenant
+5. Send credentials to user
 
-### Logging
+**Via API:**
+```bash
+# Create doctor
+curl -X POST -H "Authorization: Bearer ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "doctor@hospital.com",
+    "name": "Dr. Jane Smith",
+    "role": "doctor",
+    "tenant_id": 1
+  }' \
+  "https://your-domain.com/api/users"
 
-- Structured logging with correlation IDs
-- Error tracking and reporting
+# Create parent
+curl -X POST -H "Authorization: Bearer ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "parent@family.com",
+    "name": "John Parent",
+    "role": "parent",
+    "tenant_id": 1
+  }' \
+  "https://your-domain.com/api/users"
+```
+
+## 🧪 **Testing Setup**
+
+### **Demo Users for Testing**
+
+The system comes with pre-seeded demo users:
+
+```bash
+# Admin User
+Email: admin@example.com
+Password: password123
+Role: admin
+Access: Full system administration
+
+# Doctor User  
+Email: doctor@example.com
+Password: password123
+Role: doctor
+Access: All clinical content + AI features
+
+# Therapist User
+Email: therapist@example.com  
+Password: password123
+Role: therapist
+Access: Therapeutic content + session tools
+
+# Educator User
+Email: educator@example.com
+Password: password123
+Role: educator  
+Access: Educational content + classroom strategies
+
+# Parent User
+Email: parent@example.com
+Password: password123
+Role: parent
+Access: Family-focused guidance
+```
+
+### **Test Scenarios**
+
+1. **Admin Testing**:
+   - Login as admin
+   - Create new users
+   - View system analytics
+   - Manage content
+
+2. **Professional Testing**:
+   - Login as doctor/therapist
+   - Configure BYOK (optional)
+   - Test advanced search
+   - Generate handouts/teleprompters
+
+3. **Parent Testing**:
+   - Login as parent
+   - Browse educational content
+   - Use basic search
+   - Access family resources
+
+## 🔐 **Security Configuration**
+
+### **Environment Variables**
+```bash
+# Required
+JWT_SECRET=your-super-secure-jwt-secret-key
+DATABASE_URL=your-database-connection-string
+
+# Optional
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-secret
+```
+
+### **Production Security Checklist**
+- [ ] Change default passwords
+- [ ] Use strong JWT secrets
+- [ ] Enable HTTPS/SSL
+- [ ] Configure CORS properly
+- [ ] Implement rate limiting
+- [ ] Set up monitoring and logging
+- [ ] Regular security updates
+
+## 📊 **Monitoring & Analytics**
+
+### **Health Checks**
+```bash
+# System health
+curl https://your-domain.com/api/health
+
+# Response
+{
+  "status": "healthy",
+  "database": "connected",
+  "timestamp": "2025-10-28T12:00:00Z"
+}
+```
+
+### **Usage Analytics**
+- User activity tracking
+- Content engagement metrics
+- Search query analysis
+- AI usage statistics
 - Performance monitoring
 
-## 🧪 Testing
+## 🔄 **Development Workflow**
 
-### Unit Tests
-
+### **Local Development**
 ```bash
-# Run all tests
-npm test
+# 1. Start API server
+cd apps/app-api
+npm run dev
 
-# Run specific service tests
-cd apps/kb-api && npm test
+# 2. Start frontend (new terminal)
+cd apps/frontend  
+npm run dev
+
+# 3. Access application
+# Frontend: http://localhost:3000
+# API: http://localhost:8787
 ```
 
-### Integration Tests
-
+### **Database Management**
 ```bash
-# Run integration tests
-npm run test:integration
+# Reset database
+npm run db:reset
+
+# Add new migration
+npm run db:migrate
+
+# Seed with fresh data
+npm run db:seed
 ```
 
-### End-to-End Tests
-
+### **Testing**
 ```bash
-# Run E2E tests
-npm run test:e2e
+# Run tests
+npm run test
+
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
 ```
 
-## 🤝 Contributing
+## 📚 **Documentation**
+
+- **[User Manual](USER_MANUAL.md)**: Comprehensive guide for all user roles
+- **[Deployment Guide](DEPLOYMENT.md)**: Detailed deployment instructions
+- **[API Documentation](API_DOCS.md)**: Complete API reference
+- **[Admin Guide](ADMIN_GUIDE.md)**: System administration manual
+
+## 🤝 **Contributing**
 
 1. Fork the repository
 2. Create a feature branch
@@ -342,48 +467,41 @@ npm run test:e2e
 4. Add tests
 5. Submit a pull request
 
-### Code Style
+## 📄 **License**
 
-- Use TypeScript for all code
-- Follow ESLint configuration
-- Write meaningful commit messages
-- Add JSDoc comments for public APIs
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📄 License
+## 🆘 **Support**
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- **Documentation**: [docs/](docs/)
+- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Email**: support@your-domain.com
 
-## 🆘 Support
+## 🏆 **Roadmap**
 
-For support and questions:
+### **Current Version (v1.0)**
+- ✅ Role-based access control
+- ✅ Advanced AI search with BYOK
+- ✅ Comprehensive knowledge base
+- ✅ Multi-language support
+- ✅ Professional tools (teleprompters, handouts)
 
-- Check the documentation
-- Search existing issues
-- Create a new issue
-- Contact the development team
+### **Upcoming Features (v1.1)**
+- [ ] Mobile applications (iOS/Android)
+- [ ] Real-time collaboration features
+- [ ] Advanced analytics dashboard
+- [ ] Video content support
+- [ ] Third-party integrations
 
-## 📈 Roadmap
-
-### Phase 1 (Completed)
-- ✅ Basic CRUD operations
-- ✅ Multi-tenant support
-- ✅ i18n and RTL support
-- ✅ RBAC system
-- ✅ Export functionality
-
-### Phase 2 (Planned)
-- 📋 Advanced search with filters
-- 📋 Content versioning
-- 📋 Analytics and reporting
-- 📋 Mobile application
-- 📋 AI-powered content suggestions
-
-### Phase 3 (Future)
-- 🎯 Real-time collaboration
-- 🎯 Advanced workflow management
-- 🎯 Integration with external systems
-- 🎯 Advanced analytics dashboard
+### **Future Enhancements (v2.0)**
+- [ ] Advanced personalization algorithms
+- [ ] Offline mode support
+- [ ] Custom branding for organizations
+- [ ] Advanced reporting and analytics
+- [ ] Integration with EHR systems
 
 ---
 
-**Built with ❤️ for pediatric psychology professionals worldwide**
+**Built with ❤️ for pediatric mental health professionals and families**
+
+*Last Updated: October 2025*

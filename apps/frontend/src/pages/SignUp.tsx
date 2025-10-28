@@ -1,11 +1,9 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '../contexts/AuthContext'
 import { User } from 'lucide-react'
-import { SignIn } from '@clerk/clerk-react'
+import { SignUp } from '@clerk/clerk-react'
 
-const Login: React.FC = () => {
+const SignUpPage: React.FC = () => {
   const { t } = useTranslation()
 
   return (
@@ -16,19 +14,19 @@ const Login: React.FC = () => {
             <User className="h-8 w-8 text-primary-600" />
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            {t('app.login')}
+            {t('app.signup') || 'Sign Up'}
           </h2>
         </div>
         
-        <SignIn 
+        <SignUp 
           routing="hash"
-          signUpUrl="/signup"
-          afterSignInUrl="/app"
+          signInUrl="/login"
           afterSignUpUrl="/app"
+          afterSignInUrl="/app"
         />
       </div>
     </div>
   )
 }
 
-export default Login
+export default SignUpPage

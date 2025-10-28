@@ -2,20 +2,43 @@ import React from 'react'
 import { Outlet, Link, useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
+import { useClerk, UserButton } from '@clerk/clerk-react'
 import { LogOut, Search, Home, Shield } from 'lucide-react'
 
 const Layout: React.FC = () => {
   const { t, i18n } = useTranslation()
-  const { user, logout } = useAuth()
+  const { user, isLoading } = useAuth()
+  const clerk = useClerk()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🧭 Layout component re-render:', { 
+      user: user ? { id: user.id, role: user.role } : null, 
+      isLoading, 
+      timestamp: new Date().toISOString() 
+    })
+  })
+
+  const handleLogout = async () => {
+    await clerk.signOut()
     navigate('/')
   }
 
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang)
+  }
+
+  // Show loading state while auth is initializing
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading authentication...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!user) {
@@ -74,6 +97,8 @@ const Layout: React.FC = () => {
               <span className="text-sm text-gray-700">
                 {user.name} ({user.role})
               </span>
+              
+              <UserButton />
               
               <button
                 onClick={handleLogout}
