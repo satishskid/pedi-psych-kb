@@ -1,10 +1,15 @@
-name: Deploy to Cloudflare Workers
+name: Ops API Deploy and Smoke Test
 
 on:
   push:
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    paths:
+      - 'apps/ops-api/**'
+      - 'packages/shared/**'
+      - 'scripts/smoke-ops-api.sh'
+      - 'scripts/seed-ops-api.sh'
+      - 'scripts/data/**'
+  workflow_dispatch:
 
 env:
   NODE_VERSION: '18'
@@ -26,35 +31,16 @@ jobs:
         run: |
           npm ci
           cd packages/shared && npm ci
-          cd ../../apps/kb-api && npm ci
-          cd ../app-api && npm ci
-          cd ../ops-api && npm ci
-          cd ../frontend && npm ci
+          cd ../../apps/ops-api && npm ci
 
       - name: Build shared package
         run: |
           cd packages/shared
           npm run build
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
+      - name: Run ops-api tests
         run: |
-          python -m pip install --upgrade pip
-          pip install jsonschema
-
-      - name: Run tests
-        run: |
-          npm run test
-          python -m unittest pedi-psych-kb.tests.test_json_schema pedi-psych-kb.tests.test_knowledge_base
-
-      - name: Build frontend
-        run: |
-          cd apps/frontend
-          npm run build
+          npm run test -- -g "ops-api"
 
   deploy-staging:
     needs: test
@@ -78,32 +64,30 @@ jobs:
         run: |
           npm ci
           cd packages/shared && npm ci && npm run build
-          cd ../../apps/kb-api && npm ci
-          cd ../app-api && npm ci
-          cd ../ops-api && npm ci
-          cd ../frontend && npm ci
+          cd ../../apps/ops-api && npm ci
 
       - name: Deploy to staging
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          # Deploy kb-api
-          cd apps/kb-api
-          wrangler deploy --name pedi-psych-kb-api-staging
-          
-          # Deploy app-api
-          cd ../app-api
-          wrangler deploy --name pedi-psych-app-api-staging
-          
           # Deploy ops-api
-          cd ../ops-api
-          wrangler deploy --name pedi-psych-ops-api-staging
-          
-          # Deploy frontend to staging
-          cd ../frontend
-          npm run build
-          wrangler pages deploy dist --project-name pedi-psych-frontend-staging
+          cd apps/ops-api
+          wrangler deploy --name pedi-psych-ops-api-staging --env staging
+
+      - name: Seed staging data
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bash scripts/seed-ops-api.sh staging
+
+      - name: Run smoke tests
+        env:
+          OPS_API_URL: https://pedi-psych-ops-api-staging.workers.dev
+          CARD_ID: card-1
+        run: |
+          bash scripts/smoke-ops-api.sh $OPS_API_URL
 
   deploy-production:
     needs: test
@@ -127,29 +111,31 @@ jobs:
         run: |
           npm ci
           cd packages/shared && npm ci && npm run build
-          cd ../../apps/kb-api && npm ci
-          cd ../app-api && npm ci
-          cd ../ops-api && npm ci
-          cd ../frontend && npm ci
+          cd ../../apps/ops-api && npm ci
 
       - name: Deploy to production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          JWT_SECRET: ${{ secrets.OPS_API_JWT_SECRET }}
         run: |
-          # Deploy kb-api
-          cd apps/kb-api
-          wrangler deploy --name pedi-psych-kb-api
-          
-          # Deploy app-api
-          cd ../app-api
-          wrangler deploy --name pedi-psych-app-api
+          # Set production JWT secret
+          cd apps/ops-api
+          wrangler secret put JWT_SECRET --env production
           
           # Deploy ops-api
-          cd ../ops-api
-          wrangler deploy --name pedi-psych-ops-api
-          
-          # Deploy frontend to production
-          cd ../frontend
-          npm run build
-          wrangler pages deploy dist --project-name pedi-psych-frontend
+          wrangler deploy --name pedi-psych-ops-api --env production
+
+      - name: Seed production data
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bash scripts/seed-ops-api.sh production
+
+      - name: Run smoke tests
+        env:
+          OPS_API_URL: https://pedi-psych-ops-api.workers.dev
+          CARD_ID: card-1
+        run: |
+          bash scripts/smoke-ops-api.sh $OPS_API_URL

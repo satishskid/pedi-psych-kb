@@ -103,10 +103,20 @@ jobs:
           
           echo "All builds completed successfully"
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema
+
       - name: Run unit tests
         run: |
-          # Add test commands when you have tests
-          echo "Unit tests would run here"
+          npm run test
+          python -m unittest pedi-psych-kb.tests.test_json_schema pedi-psych-kb.tests.test_knowledge_base
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

@@ -1,0 +1,9 @@
+{
+  "id": "card-1",
+  "title": { "en": "Smoke Test Card" },
+  "description": { "en": "For export smoke tests" },
+  "content": { "en": "This is a test card body." },
+  "tags": ["smoke", "demo"],
+  "created_at": "2025-01-01T00:00:00.000Z",
+  "updated_at": "2025-01-01T00:00:00.000Z"
+}
