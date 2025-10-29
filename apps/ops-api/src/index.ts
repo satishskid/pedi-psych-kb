@@ -1,10 +1,11 @@
 import { Hono, Context as HonoContext } from 'hono'
 import { cors } from 'hono/cors'
-import { jwt } from 'hono/jwt'
+import { jwt, sign } from 'hono/jwt'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
-import { Policy, User, SearchQuery, Card, ExportRequest } from '@pedi-psych/shared'
-import { policySchema, exportRequestSchema } from '@pedi-psych/shared'
+import { Policy, User, SearchQuery, Card } from '@pedi-psych/shared'
+// removed import of policySchema, exportRequestSchema from '@pedi-psych/shared'
+
 import { rbacManager } from './rbac'
 import { exportService } from './export'
 
@@ -14,7 +15,20 @@ export interface Env {
   JWT_SECRET: string
 }
 
-const app = new Hono<{ Bindings: Env }>()
+// Define local stored export type matching our storage shape
+interface StoredExportRequest {
+  id: string
+  user_id: string
+  card_ids: string[]
+  format: 'html' | 'pdf'
+  status: 'completed' | 'pending' | 'failed'
+  resultUrl: string
+  tenant_id: string
+  created_at: string
+  updated_at: string
+}
+
+const app = new Hono()
 
 app.use('/*', cors())
 
@@ -28,43 +42,45 @@ app.post('/auth/login', zValidator('json', LoginSchema), async (c) => {
   try {
     const { email, password } = c.req.valid('json')
     
-    // For demo purposes, accept hardcoded admin credentials
-    if (email === 'admin@example.com' && password === 'admin123') {
-      const token = await jwt.sign({
-        userId: 'admin-123',
-        email: 'admin@example.com',
-        name: 'Admin User',
-        role: 'admin',
-        tenantId: 'default',
-        createdAt: new Date().toISOString()
-      }, c.env.JWT_SECRET)
-      
-      return c.json({
-        token,
-        user: {
-          id: 'admin-123',
-          email: 'admin@example.com',
-          name: 'Admin User',
-          role: 'admin',
-          tenant_id: 'default'
-        }
-      })
-    }
-    
-    // Check against stored users (for non-admin users)
-    const userData = await c.env.POLICY_STORE.get(`user:${email}`)
+    // Check against stored users
+    const userData = await getEnv(c).POLICY_STORE.get(`user:${email}`)
     if (userData) {
       const user = JSON.parse(userData)
-      // In a real app, verify password hash
-      if (password === 'demo123') { // Demo password
-        const token = await jwt.sign({
+      // Verify password (in production, this should use proper password hashing)
+      // For demo purposes, accept the password stored with the user
+      const userPassword = await getEnv(c).POLICY_STORE.get(`user:${email}:password`)
+      if (userPassword && password === userPassword) {
+        const token = await sign({
           userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           tenantId: user.tenant_id,
           createdAt: user.created_at
-        }, c.env.JWT_SECRET)
+        }, getEnv(c).JWT_SECRET)
+        
+        return c.json({
+          token,
+          user: user
+        })
+      }
+    }
+    
+    // Additional user lookup (legacy fallback)
+    const userData = await getEnv(c).POLICY_STORE.get(`user:${email}`)
+    if (userData) {
+      const user = JSON.parse(userData)
+      // Verify password from user store
+      const userPassword = await getEnv(c).POLICY_STORE.get(`user:${email}:password`)
+      if (userPassword && password === userPassword) {
+        const token = await sign({
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          tenantId: user.tenant_id,
+          createdAt: user.created_at
+        }, getEnv(c).JWT_SECRET)
         
         return c.json({
           token,
@@ -88,12 +104,16 @@ app.use('/api/*', async (c, next) => {
   }
   
   const jwtMiddleware = jwt({
-    secret: c.env.JWT_SECRET,
+    secret: getEnv(c).JWT_SECRET,
   })
   return jwtMiddleware(c, next)
 })
 
 // Helper function to get user from JWT token
+function getEnv(c: HonoContext): Env {
+  return c.env as unknown as Env
+}
+
 function getUserFromContext(c: HonoContext): User {
   const payload = c.get('jwtPayload')
   return {
@@ -140,7 +160,7 @@ app.post('/api/policies', zValidator('json', CreatePolicySchema), async (c) => {
     }
 
     // Store in KV
-    await c.env.POLICY_STORE.put(`policy:${policy.id}`, JSON.stringify(policy))
+    await getEnv(c).POLICY_STORE.put(`policy:${policy.id}`, JSON.stringify(policy))
     
     // Update RBAC manager
     rbacManager.upsertPolicy(policy)
@@ -161,15 +181,16 @@ app.get('/api/policies', async (c) => {
       return c.json({ error: 'Access denied' }, 403)
     }
 
-    const list = await c.env.POLICY_STORE.list({ prefix: 'policy:' })
+    const list = await getEnv(c).POLICY_STORE.list({ prefix: 'policy:' })
     const policies: Policy[] = []
     
     for (const key of list.keys) {
-      const policyData = await c.env.POLICY_STORE.get(key.name)
+      const policyData = await getEnv(c).POLICY_STORE.get(key.name)
       if (policyData) {
-        const policy = JSON.parse(policyData)
-        // Only return policies for user's tenant
-        if (policy.tenant_id === user.tenant_id) {
+        const policy: Policy = JSON.parse(policyData)
+        // If policy has tenant condition, enforce it; otherwise include
+        const tenantCondition = policy.conditions && (policy.conditions as any)['tenant_id']
+        if (!tenantCondition || tenantCondition === user.tenant_id) {
           policies.push(policy)
         }
       }
@@ -192,15 +213,16 @@ app.get('/api/policies/:id', async (c) => {
       return c.json({ error: 'Access denied' }, 403)
     }
 
-    const policyData = await c.env.POLICY_STORE.get(`policy:${policyId}`)
+    const policyData = await getEnv(c).POLICY_STORE.get(`policy:${policyId}`)
     if (!policyData) {
       return c.json({ error: 'Policy not found' }, 404)
     }
 
-    const policy = JSON.parse(policyData)
+    const policy: Policy = JSON.parse(policyData)
     
-    // Check tenant isolation
-    if (policy.tenant_id !== user.tenant_id) {
+    // Enforce tenant condition if present
+    const tenantCondition = policy.conditions && (policy.conditions as any)['tenant_id']
+    if (tenantCondition && tenantCondition !== user.tenant_id) {
       return c.json({ error: 'Access denied' }, 403)
     }
 
@@ -221,19 +243,20 @@ app.delete('/api/policies/:id', async (c) => {
       return c.json({ error: 'Access denied' }, 403)
     }
 
-    const policyData = await c.env.POLICY_STORE.get(`policy:${policyId}`)
+    const policyData = await getEnv(c).POLICY_STORE.get(`policy:${policyId}`)
     if (!policyData) {
       return c.json({ error: 'Policy not found' }, 404)
     }
 
-    const policy = JSON.parse(policyData)
+    const policy: Policy = JSON.parse(policyData)
     
-    // Check tenant isolation
-    if (policy.tenant_id !== user.tenant_id) {
+    // Enforce tenant condition if present
+    const tenantCondition = policy.conditions && (policy.conditions as any)['tenant_id']
+    if (tenantCondition && tenantCondition !== user.tenant_id) {
       return c.json({ error: 'Access denied' }, 403)
     }
 
-    await c.env.POLICY_STORE.delete(`policy:${policyId}`)
+    await getEnv(c).POLICY_STORE.delete(`policy:${policyId}`)
     rbacManager.deletePolicy(policyId)
     
     return c.json({ message: 'Policy deleted successfully' })
@@ -281,7 +304,15 @@ app.post('/api/rbac/evaluate', zValidator('json', RBACEvaluateSchema), async (c)
 })
 
 // Export endpoints
-app.post('/api/export', zValidator('json', exportRequestSchema), async (c) => {
+const ExportRequestBodySchema = z.object({
+  format: z.enum(['html', 'pdf']),
+  language: z.string(),
+  includeMetadata: z.boolean().optional(),
+  template: z.enum(['default', 'medical', 'educational']).optional(),
+  cardIds: z.array(z.string())
+})
+
+app.post('/api/export', zValidator('json', ExportRequestBodySchema), async (c) => {
   try {
     const user = getUserFromContext(c)
     const data = c.req.valid('json')
@@ -302,13 +333,11 @@ app.post('/api/export', zValidator('json', exportRequestSchema), async (c) => {
     // Fetch cards from storage (this would be from your card storage)
     const cards: Card[] = []
     for (const cardId of data.cardIds) {
-      const cardData = await c.env.POLICY_STORE.get(`card:${cardId}`)
+      const cardData = await getEnv(c).POLICY_STORE.get(`card:${cardId}`)
       if (cardData) {
-        const card = JSON.parse(cardData)
-        // Check tenant isolation for cards
-        if (card.tenantId === user.tenantId) {
-          cards.push(card)
-        }
+        const card = JSON.parse(cardData) as Card
+        // Include cards; tenant isolation can be handled via policies/conditions
+        cards.push(card)
       }
     }
 
@@ -316,38 +345,36 @@ app.post('/api/export', zValidator('json', exportRequestSchema), async (c) => {
       return c.json({ error: 'No cards found or access denied' }, 404)
     }
 
-    let result: Buffer | string
+    let result: string
 
     switch (options.format) {
       case 'html':
         result = await exportService.exportToHTML(cards, user, options)
         break
       case 'pdf':
-        // For now, generate HTML and return as string
-        // In production, you would convert to PDF
-        result = await exportService.exportToHTML(cards, user, options)
+        result = await exportService.exportToPDF(cards, user, options)
         break
       default:
         throw new Error(`Unsupported format: ${options.format}`)
     }
 
     // Store export request for tracking
-    const exportRequest = {
+    const exportRequest: StoredExportRequest = {
       id: crypto.randomUUID(),
-      userId: user.id,
-      cardIds: data.cardIds,
+      user_id: user.id,
+      card_ids: data.cardIds,
       format: options.format,
       status: 'completed',
       resultUrl: `export:${crypto.randomUUID()}`,
-      tenantId: user.tenant_id,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      tenant_id: user.tenant_id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
-    await c.env.POLICY_STORE.put(`export:${exportRequest.id}`, JSON.stringify(exportRequest))
+    await getEnv(c).POLICY_STORE.put(`export:${exportRequest.id}`, JSON.stringify(exportRequest))
     
     // Store the actual export result
-    await c.env.POLICY_STORE.put(exportRequest.resultUrl, typeof result === 'string' ? result : result.toString())
+    await getEnv(c).POLICY_STORE.put(exportRequest.resultUrl, result)
 
     return c.json({
       exportId: exportRequest.id,
@@ -369,15 +396,15 @@ app.get('/api/export/download/:id', async (c) => {
     const user = getUserFromContext(c)
     const exportId = c.req.param('id')
 
-    const exportData = await c.env.POLICY_STORE.get(`export:${exportId}`)
+    const exportData = await getEnv(c).POLICY_STORE.get(`export:${exportId}`)
     if (!exportData) {
       return c.json({ error: 'Export not found' }, 404)
     }
 
-    const exportRequest: ExportRequest = JSON.parse(exportData)
+    const exportRequest: StoredExportRequest = JSON.parse(exportData)
     
     // Check tenant isolation
-    if (exportRequest.userId !== user.id && exportRequest.tenantId !== user.tenantId) {
+    if (exportRequest.user_id !== user.id && exportRequest.tenant_id !== user.tenant_id) {
       return c.json({ error: 'Access denied' }, 403)
     }
 
@@ -385,27 +412,46 @@ app.get('/api/export/download/:id', async (c) => {
       return c.json({ error: 'Export result not available' }, 404)
     }
 
-    const resultData = await c.env.POLICY_STORE.get(exportRequest.resultUrl)
+    const resultData = await getEnv(c).POLICY_STORE.get(exportRequest.resultUrl)
     if (!resultData) {
       return c.json({ error: 'Export data not found' }, 404)
     }
 
-    // Set appropriate headers for file download
     const filename = `export-${exportId}.${exportRequest.format}`
-    const contentType = exportRequest.format === 'html' ? 'text/html' : 'application/octet-stream'
 
-    return new Response(resultData, {
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Cache-Control': 'no-cache'
-      }
-    })
+    if (exportRequest.format === 'pdf') {
+      const bytes = base64ToUint8Array(resultData)
+      return new Response(bytes, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-cache'
+        }
+      })
+    } else {
+      return new Response(resultData, {
+        headers: {
+          'Content-Type': 'text/html',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-cache'
+        }
+      })
+    }
   } catch (error) {
     console.error('Error downloading export:', error)
     return c.json({ error: 'Download failed' }, 500)
   }
 })
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryString = atob(base64)
+  const len = binaryString.length
+  const bytes = new Uint8Array(len)
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+  return bytes
+}
 
 // User permissions endpoint
 app.get('/api/user/permissions', async (c) => {

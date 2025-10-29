@@ -16,13 +16,15 @@ database_name = "pedi-psych-kb-prod"
 database_id = "ce6fd0f2-b6bf-40b1-a6be-e348d50c6266"
 
 [vars]
-JWT_SECRET = "your-jwt-secret-key-here"
+JWT_SECRET = ""
 REGION_DEFAULT = "us-east-1"
 GOOGLE_CLIENT_ID = ""
 GOOGLE_CLIENT_SECRET = ""
+# CLERK_SECRET_KEY is managed as a secret; remove plaintext var to avoid binding conflict.
 
 [env.production.vars]
-JWT_SECRET = "your-jwt-secret-key-here"
+JWT_SECRET = ""
 REGION_DEFAULT = "us-east-1"
 GOOGLE_CLIENT_ID = ""
 GOOGLE_CLIENT_SECRET = ""
+# CLERK_SECRET_KEY is managed as a secret; remove plaintext var to avoid binding conflict.

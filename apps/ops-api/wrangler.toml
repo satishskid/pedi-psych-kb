@@ -1,0 +1,33 @@
+name = "ops-api"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+
+# Development KV bindings (replace with your actual IDs)
+[[kv_namespaces]]
+binding = "POLICY_STORE"
+id = "56475353027d40f8829e56934c0dce24"
+preview_id = "e24800ce56b0481cb85a9b82d26afa7d"
+
+[[kv_namespaces]]
+binding = "USER_STORE"
+id = "56475353027d40f8829e56934c0dce24"
+preview_id = "e24800ce56b0481cb85a9b82d26afa7d"
+
+[vars]
+JWT_SECRET = ""
+
+# Production environment overrides
+[env.production]
+name = "ops-api-prod"
+
+# Production KV bindings (set real KV IDs in Cloudflare dashboard)
+[[env.production.kv_namespaces]]
+binding = "POLICY_STORE"
+id = "<prod-policy-kv-id>"
+
+[[env.production.kv_namespaces]]
+binding = "USER_STORE"
+id = "<prod-user-kv-id>"
+
+[env.production.vars]
+JWT_SECRET = ""

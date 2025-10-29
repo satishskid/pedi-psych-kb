@@ -11,6 +11,7 @@ import contentRoutes from './routes/content';
 import adminRoutes from './routes/admin';
 import { licenseMiddleware, trackAPIUsage } from './middleware/license';
 import { apiUsageMiddleware } from './middleware/api-usage';
+import { createClerkClient } from '@clerk/backend'
 
 // Helper function to get database binding
 function getDatabase(c: any) {
@@ -71,7 +72,7 @@ app.post('/api/test/create-user', async (c) => {
   try {
     const { email, name, role = 'parent' } = await c.req.json();
     const now = new Date().toISOString();
-    const passwordHash = 'demo123';
+    const passwordHash = 'demo123'; // This will be stored in the user record
     const tenantId = '1';
 
     console.log('Creating test user:', { email, name, role });
@@ -118,8 +119,9 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
     
     if (userResult) {
       const user = userResult as unknown as User;
-      // For demo purposes, accept password123 for all seeded users
-      if (password === 'password123') {
+      // Verify password (in production, use proper password hashing)
+      // For demo purposes, check against stored password hash
+      if (password === user.password_hash) {
         
         // Simple license check - check if user has an active license
         let licenseStatus = 'active'; // Default for demo
@@ -573,3 +575,87 @@ app.route('/api', contentRoutes);
 app.route('/api', adminRoutes);
 
 export default app;
+
+// Clerk token exchange endpoint (before JWT middleware)
+app.post('/api/auth/clerk/exchange', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+    if (!token) {
+      return c.json({ error: 'Missing Clerk token' }, 400)
+    }
+
+    const secretKey = c.env.CLERK_SECRET_KEY
+    if (!secretKey) {
+      return c.json({ error: 'CLERK_SECRET_KEY not configured' }, 500)
+    }
+
+    const clerk = createClerkClient({ secretKey })
+    const verified = await clerk.verifyToken(token)
+    const clerkUserId = verified.sub
+
+    const clerkUser = await clerk.users.getUser(clerkUserId)
+    const email = clerkUser?.primaryEmailAddress?.emailAddress || ''
+    const name = clerkUser?.fullName || clerkUser?.username || 'User'
+
+    // Determine role: prefer Clerk publicMetadata.role, fallback by email, else parent
+    let role = (clerkUser?.publicMetadata as any)?.role as string | undefined
+    if (!role && email === 'satish@skids.health') {
+      role = 'admin'
+    }
+    role = role || 'parent'
+
+    const db = getDatabase(c)
+
+    // Upsert user in our DB
+    const existingUser = await db
+      .prepare('SELECT * FROM users WHERE email = ?')
+      .bind(email)
+      .first()
+
+    let user = existingUser as any
+    if (!user) {
+      const now = new Date().toISOString()
+      const tenantId = '1'
+      const passwordHash = 'clerk_oauth'
+      await db
+        .prepare(
+          `INSERT INTO users (email, password_hash, name, role, tenant_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
+        )
+        .bind(email, passwordHash, name, role, tenantId, now, now)
+        .run()
+
+      user = await db
+        .prepare('SELECT * FROM users WHERE email = ?')
+        .bind(email)
+        .first()
+    } else {
+      // Ensure role is up to date with Clerk
+      if (user.role !== role) {
+        await db
+          .prepare('UPDATE users SET role = ?, updated_at = ? WHERE id = ?')
+          .bind(role, new Date().toISOString(), user.id)
+          .run()
+        user.role = role
+      }
+    }
+
+    const jwtToken = await sign(
+      {
+        userId: user.id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenant_id,
+        createdAt: user.created_at,
+      },
+      c.env.JWT_SECRET
+    )
+
+    return c.json({ token: jwtToken, user })
+  } catch (err: any) {
+    console.error('Clerk exchange error:', err)
+    return c.json({ error: 'Failed to exchange Clerk token', details: err?.message || 'unknown' }, 500)
+  }
+})
