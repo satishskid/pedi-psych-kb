@@ -23,7 +23,13 @@ const SearchPage: React.FC = () => {
   const performSearch = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+      const API_BASE = import.meta.env.VITE_API_URL || ''
+      const url = API_BASE ? `${API_BASE}/api/search?q=${encodeURIComponent(query)}` : `/api/search?q=${encodeURIComponent(query)}`
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setResults(data.results)
@@ -35,17 +41,21 @@ const SearchPage: React.FC = () => {
     }
   }
 
-  const handleExport = async (cardId: string) => {
+  const exportCard = async (cardId: string) => {
     try {
-      const response = await fetch(`/api/export/${cardId}`)
+      const API_BASE = import.meta.env.VITE_API_URL || ''
+      const url = API_BASE ? `${API_BASE}/api/export/${cardId}` : `/api/export/${cardId}`
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      })
       if (response.ok) {
         const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `card-${cardId}.html`
-        a.click()
-        window.URL.revokeObjectURL(url)
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = `card-${cardId}.json`
+        link.click()
       }
     } catch (error) {
       console.error('Export failed:', error)
@@ -109,7 +119,7 @@ const SearchPage: React.FC = () => {
                     View
                   </button>
                   <button
-                    onClick={() => handleExport(card.id)}
+                    onClick={() => exportCard(card.id)}
                     className="btn-primary"
                   >
                     <Download className="w-4 h-4" />
@@ -149,7 +159,7 @@ const SearchPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    handleExport(selectedCard.id)
+                    exportCard(selectedCard.id)
                     setSelectedCard(null)
                   }}
                   className="btn-primary"

@@ -4,9 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   BookOpen, Search, Filter, ChevronRight, ChevronLeft, 
   Bookmark, Download, Share2, Eye, Clock, User, Tag,
-  ArrowLeft, Menu, X, Star, Heart, Users, FileText 
+  ArrowLeft, Menu, X, Star, Heart, Users, FileText, TrendingUp 
 } from 'lucide-react'
-import { Card as UICard } from '../components/ui/card'
 // Note: Card interface is defined locally to match API schema
 
 interface BookChapter {
@@ -78,7 +77,11 @@ const BookMode: React.FC = () => {
   const fetchBookStructure = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/content/book-structure?language=${i18n.language}&role=${filter}`, {
+      const API_BASE = import.meta.env.VITE_API_URL || ''
+      const url = API_BASE
+        ? `${API_BASE}/api/content/book-structure?language=${i18n.language}&role=${filter}`
+        : `/api/content/book-structure?language=${i18n.language}&role=${filter}`
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -169,6 +172,8 @@ const BookMode: React.FC = () => {
                 },
                 category: 'development',
                 tags: ['development', 'milestones', 'assessment'],
+                target_roles: ['doctor', 'therapist', 'educator', 'parent'],
+                languages: ['en', 'ar', 'hi'],
                 metadata: { age_range: { min: 0, max: 18 }, difficulty_level: 'beginner' },
                 access_level: 'public',
                 role_permissions: ['doctor', 'therapist', 'educator', 'parent'],

@@ -23,11 +23,11 @@ name = "ops-api-prod"
 # Production KV bindings (set real KV IDs in Cloudflare dashboard)
 [[env.production.kv_namespaces]]
 binding = "POLICY_STORE"
-id = "<prod-policy-kv-id>"
+id = "51cf3da315784afe910ea727bf6ab097"
 
 [[env.production.kv_namespaces]]
 binding = "USER_STORE"
-id = "<prod-user-kv-id>"
+id = "4fc305b62a964ccf9823bc65b0792b45"
 
 [env.production.vars]
 JWT_SECRET = ""

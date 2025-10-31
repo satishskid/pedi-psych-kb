@@ -13,30 +13,33 @@ export class RBACManager {
       {
         id: 'admin-full-access',
         name: 'Admin Full Access',
+        description: 'Full access for admin role',
         effect: 'allow',
         actions: ['*'],
         resources: ['*'],
-        conditions: { role: 'admin' },
+        conditions: { 'user.role': 'admin' },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
       {
         id: 'editor-content-access',
         name: 'Editor Content Access',
+        description: 'Read and write access to cards for editors',
         effect: 'allow',
         actions: ['read', 'write'],
         resources: ['cards'],
-        conditions: { role: 'editor' },
+        conditions: { 'user.role': 'editor' },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
       {
         id: 'viewer-read-only',
         name: 'Viewer Read Only',
+        description: 'Read-only access to cards for viewers',
         effect: 'allow',
         actions: ['read'],
         resources: ['cards'],
-        conditions: { role: 'viewer' },
+        conditions: { 'user.role': 'viewer' },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -85,11 +88,6 @@ export class RBACManager {
     action: string,
     context?: Record<string, any>
   ): boolean {
-    // Check tenant isolation
-    if (user.tenant_id !== policy.tenant_id) {
-      return false
-    }
-
     // Check resource match (supports wildcards)
     if (!this.matchesResource(policy.resources, resource)) {
       return false
@@ -101,7 +99,7 @@ export class RBACManager {
     }
 
     // Check conditions
-    if (!this.matchesConditions(user, policy.conditions, context)) {
+    if (!this.matchesConditions(user, policy.conditions || {}, context)) {
       return false
     }
 
@@ -111,27 +109,32 @@ export class RBACManager {
   /**
    * Check if resource matches policy resource (supports wildcards)
    */
-  private matchesResource(policyResource: string, requestedResource: string): boolean {
-    if (policyResource === '*') {
+  private matchesResource(policyResources: string[], requestedResource: string): boolean {
+    if (policyResources.includes('*')) {
       return true
     }
-    
-    // Support for resource patterns like "cards:*" or "cards:123"
-    if (policyResource.includes('*')) {
-      const pattern = policyResource.replace('*', '.*')
-      const regex = new RegExp(`^${pattern}$`)
-      return regex.test(requestedResource)
-    }
-    
-    return policyResource === requestedResource
+
+    return policyResources.some((policyResource) => {
+      if (policyResource === '*') {
+        return true
+      }
+      if (policyResource.includes('*')) {
+        const pattern = policyResource.replace('*', '.*')
+        const regex = new RegExp(`^${pattern}$`)
+        return regex.test(requestedResource)
+      }
+      return policyResource === requestedResource
+    })
   }
 
   /**
    * Check if action matches policy action (supports multiple actions)
    */
-  private matchesAction(policyAction: string, requestedAction: string): boolean {
-    const allowedActions = policyAction.split(',').map(a => a.trim())
-    return allowedActions.includes('*') || allowedActions.includes(requestedAction)
+  private matchesAction(policyActions: string[], requestedAction: string): boolean {
+    if (policyActions.includes('*')) {
+      return true
+    }
+    return policyActions.includes(requestedAction)
   }
 
   /**
@@ -148,7 +151,7 @@ export class RBACManager {
         email: user.email,
         name: user.name,
         role: user.role,
-        tenantId: user.tenantId
+        tenant_id: user.tenant_id
       },
       ...context
     }
@@ -208,7 +211,7 @@ export class RBACManager {
    */
   getUserPolicies(user: User): Policy[] {
     return Array.from(this.policies.values()).filter(policy => 
-      user.tenantId === policy.tenantId
+      this.matchesConditions(user, policy.conditions || {})
     )
   }
 
@@ -241,24 +244,27 @@ export class RBACManager {
     resource: string,
     action: string,
     role?: string,
-    tenantId?: number,
-    createdBy?: number
+    tenantId?: string,
+    createdBy?: string
   ): Policy {
     const conditions: Record<string, any> = {}
     if (role) {
       conditions.role = role
     }
+    if (tenantId) {
+      conditions.tenant_id = tenantId
+    }
 
     return {
       id: `policy-${Date.now()}`,
       name,
-      resource,
-      action,
+      description: `Rule: ${action} on ${resource}`,
+      effect: 'allow',
+      actions: [action],
+      resources: [resource],
       conditions,
-      tenantId: tenantId || 1,
-      createdBy: createdBy || 1,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
   }
 }

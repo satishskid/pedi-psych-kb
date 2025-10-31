@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { useUser } from '@clerk/clerk-react'
+import { useUser, useAuth as useClerkAuth } from '@clerk/clerk-react'
 
 interface User {
   id: string
@@ -29,39 +29,74 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user: clerkUser, isLoaded } = useUser()
+  const { getToken } = useClerkAuth()
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     console.log('🔐 AuthContext useEffect triggered:', { isLoaded, hasClerkUser: !!clerkUser, timestamp: new Date().toISOString() })
     
-    if (!isLoaded) return
+    const setupUser = async () => {
+      if (!isLoaded) return
 
-    if (clerkUser) {
-      // Map Clerk user to our user format
-      const userData = {
-        id: clerkUser.id,
-        email: clerkUser.primaryEmailAddress?.emailAddress || '',
-        name: clerkUser.fullName || clerkUser.username || 'User',
-        role: 'clinician', // Default role, you can customize this
-        tenant_id: 'default', // You can customize this based on your needs
+      if (clerkUser) {
+        const roleFromClerk = (clerkUser.publicMetadata as any)?.role as string | undefined
+        const userData: User = {
+          id: clerkUser.id,
+          email: clerkUser.primaryEmailAddress?.emailAddress || '',
+          name: clerkUser.fullName || clerkUser.username || 'User',
+          role: roleFromClerk || (clerkUser.primaryEmailAddress?.emailAddress === 'satish@skids.health' ? 'admin' : 'parent'),
+          tenant_id: 'default',
+        }
+        setUser(userData)
+
+        // Try to exchange Clerk session for internal JWT
+        try {
+          const clerkToken = await getToken()
+          if (clerkToken) {
+            const API_BASE = import.meta.env.VITE_API_URL || ''
+            const url = API_BASE ? `${API_BASE}/api/auth/clerk/exchange` : `/api/auth/clerk/exchange`
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${clerkToken}`,
+              },
+            })
+            if (resp.ok) {
+              const data = await resp.json()
+              // Persist internal JWT for API calls
+              localStorage.setItem('token', data.token)
+              // Use backend's view of user (ensures role matches server)
+              setUser({
+                id: data.user.id?.toString?.() || data.user.id,
+                email: data.user.email,
+                name: data.user.name,
+                role: data.user.role,
+                tenant_id: data.user.tenant_id?.toString?.() || data.user.tenant_id,
+              })
+            } else {
+              console.warn('Clerk exchange failed', await resp.text())
+            }
+          }
+        } catch (err) {
+          console.warn('Clerk exchange error', err)
+        }
+      } else {
+        setUser(null)
+        localStorage.removeItem('token')
       }
-      console.log('✅ Setting user data:', userData)
-      setUser(userData)
-    } else {
-      console.log('🚫 Setting user to null')
-      setUser(null)
-    }
-    setIsLoading(false)
-  }, [clerkUser, isLoaded])
 
-  const login = async (email: string, password: string) => {
-    // This is no longer needed since Clerk handles authentication
+      setIsLoading(false)
+    }
+
+    setupUser()
+  }, [clerkUser, isLoaded, getToken])
+
+  const login = async () => {
     throw new Error('Use Clerk authentication instead')
   }
 
   const logout = () => {
-    // This is no longer needed since Clerk handles logout
     throw new Error('Use Clerk signOut instead')
   }
 

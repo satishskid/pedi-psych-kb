@@ -46,30 +46,6 @@ app.post('/auth/login', zValidator('json', LoginSchema), async (c) => {
     const userData = await getEnv(c).POLICY_STORE.get(`user:${email}`)
     if (userData) {
       const user = JSON.parse(userData)
-      // Verify password (in production, this should use proper password hashing)
-      // For demo purposes, accept the password stored with the user
-      const userPassword = await getEnv(c).POLICY_STORE.get(`user:${email}:password`)
-      if (userPassword && password === userPassword) {
-        const token = await sign({
-          userId: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          tenantId: user.tenant_id,
-          createdAt: user.created_at
-        }, getEnv(c).JWT_SECRET)
-        
-        return c.json({
-          token,
-          user: user
-        })
-      }
-    }
-    
-    // Additional user lookup (legacy fallback)
-    const userData = await getEnv(c).POLICY_STORE.get(`user:${email}`)
-    if (userData) {
-      const user = JSON.parse(userData)
       // Verify password from user store
       const userPassword = await getEnv(c).POLICY_STORE.get(`user:${email}:password`)
       if (userPassword && password === userPassword) {

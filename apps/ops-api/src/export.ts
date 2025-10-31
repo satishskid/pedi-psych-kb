@@ -1,4 +1,5 @@
 import { Card, User, SUPPORTED_LANGUAGES, isRTLLanguage } from '@pedi-psych/shared'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 export interface ExportOptions {
   format: 'html' | 'pdf'
@@ -200,51 +201,42 @@ export class ExportService {
             ${this.formatContent(content)}
         </div>`
 
-    if (card.tags && card.tags.length > 0) {
-      html += `
-        <div class="tags">
-            ${card.tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')}
-        </div>`
-    }
-
-    if (includeMetadata && card.metadata) {
+    if (includeMetadata) {
+      const metadata = {
+        languages: card.languages.join(', '),
+        tags: card.tags.join(', '),
+        target_roles: card.target_roles.join(', '),
+        created_at: card.created_at,
+        updated_at: card.updated_at
+      }
       html += `
         <div class="metadata">
-            <strong>Additional Information:</strong><br>
-            ${this.formatMetadata(card.metadata)}
+            <strong>Languages:</strong> ${this.escapeHtml(metadata.languages)}<br/>
+            <strong>Tags:</strong> ${this.escapeHtml(metadata.tags)}<br/>
+            <strong>Target Roles:</strong> ${this.escapeHtml(metadata.target_roles)}<br/>
+            <strong>Created:</strong> ${this.escapeHtml(metadata.created_at)}<br/>
+            <strong>Updated:</strong> ${this.escapeHtml(metadata.updated_at)}
         </div>`
     }
 
-    html += `
-    </div>`
-
+    html += '\n    </div>'
     return html
   }
 
-  /**
-   * Format content for HTML display
-   */
   private formatContent(content: string): string {
-    // Convert line breaks to paragraphs
-    const paragraphs = content.split('\n\n').map(para => 
-      `<p>${this.escapeHtml(para.trim())}</p>`
-    ).join('\n')
-    
-    return paragraphs
+    if (typeof content === 'string') {
+      return this.escapeHtml(content)
+    }
+    if (typeof content === 'object') {
+      return `<pre>${this.escapeHtml(JSON.stringify(content, null, 2))}</pre>`
+    }
+    return this.escapeHtml(String(content))
   }
 
-  /**
-   * Format metadata for HTML display
-   */
   private formatMetadata(metadata: Record<string, any>): string {
-    const entries = Object.entries(metadata)
-      .map(([key, value]) => {
-        const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-        return `<strong>${formattedKey}:</strong> ${value}<br>`
-      })
+    return Object.entries(metadata)
+      .map(([key, value]) => `<div><strong>${this.escapeHtml(key)}:</strong> ${this.escapeHtml(String(value))}</div>`) 
       .join('\n')
-    
-    return entries
   }
 
   /**
@@ -263,19 +255,95 @@ export class ExportService {
   }
 
   /**
-   * Export cards to PDF format (placeholder for PDF generation)
+   * Export cards to PDF format (basic implementation using pdf-lib)
+   * Returns a base64-encoded PDF string for KV storage.
    */
   async exportToPDF(
     cards: Card[],
     user: User,
     options: ExportOptions
-  ): Promise<Buffer> {
-    // For now, convert HTML to PDF using a simple approach
-    // In a real implementation, you would use a library like Puppeteer or PDFKit
-    const html = await this.exportToHTML(cards, user, options)
-    
-    // This is a placeholder - in production, use a proper PDF generation library
-    throw new Error('PDF generation not implemented. Use HTML export instead.')
+  ): Promise<string> {
+    const doc = await PDFDocument.create()
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+
+    const margin = 50
+    const lineHeight = 18
+    const pageWidth = 595.28 // A4 width in points
+    const pageHeight = 841.89 // A4 height in points
+
+    const addPageWithText = (lines: string[]) => {
+      const page = doc.addPage([pageWidth, pageHeight])
+      let y = pageHeight - margin
+
+      // Header
+      page.drawText('Pediatric Psychology Knowledge Base Export', {
+        x: margin,
+        y,
+        size: 16,
+        font,
+        color: rgb(0.2, 0.2, 0.6)
+      })
+      y -= lineHeight * 2
+
+      const meta = `Exported by ${user.name} on ${new Date().toLocaleDateString(options.language)} | ${cards.length} cards`
+      page.drawText(meta, { x: margin, y, size: 10, font })
+      y -= lineHeight * 2
+
+      for (const line of lines) {
+        if (y < margin + lineHeight) {
+          // Start a new page when space runs out
+          y = pageHeight - margin
+          const newPage = doc.addPage([pageWidth, pageHeight])
+          y -= lineHeight
+          // Switch to new page context
+          const idx = doc.getPageIndices().length - 1
+          const p = doc.getPages()[idx]
+          p.drawText(line, { x: margin, y, size: 12, font })
+          y -= lineHeight
+          continue
+        }
+        page.drawText(line, { x: margin, y, size: 12, font })
+        y -= lineHeight
+      }
+    }
+
+    // Build lines from cards
+    const lines: string[] = []
+    for (const card of cards) {
+      const title = card.title[options.language as keyof typeof card.title] || card.title.en
+      const description = card.description?.[options.language as keyof typeof card.description] || card.description?.en || ''
+      lines.push(`Category: ${card.category}`)
+      lines.push(`Title: ${this.stripNewlines(String(title)).slice(0, 200)}`)
+      if (description) {
+        lines.push(`Description: ${this.stripNewlines(String(description)).slice(0, 300)}`)
+      }
+      lines.push(`Tags: ${card.tags.join(', ')}`)
+      lines.push('')
+    }
+
+    if (lines.length === 0) {
+      lines.push('No cards available to export.')
+    }
+
+    addPageWithText(lines)
+
+    const pdfBytes = await doc.save() // Uint8Array
+    const base64 = this.uint8ToBase64(pdfBytes)
+    return base64
+  }
+
+  private stripNewlines(s: string): string {
+    return s.replace(/\s+/g, ' ')
+  }
+
+  private uint8ToBase64(bytes: Uint8Array): string {
+    let binary = ''
+    const len = bytes.byteLength
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i])
+    }
+    // btoa is available in CF Workers
+    return btoa(binary)
   }
 
   /**

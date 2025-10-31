@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { jwt, sign } from 'hono/jwt';
-import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { D1Database } from '@cloudflare/workers-types';
 import { UserSchema, TenantSchema } from '@pedi-psych/shared';
 import type { User, Tenant } from '@pedi-psych/shared';
@@ -70,9 +71,9 @@ app.get('/api/health', async (c) => {
 // Test user creation endpoint (for development only)
 app.post('/api/test/create-user', async (c) => {
   try {
-    const { email, name, role = 'parent' } = await c.req.json();
+    const { email, name, role = 'parent', password = 'demo123' } = await c.req.json();
     const now = new Date().toISOString();
-    const passwordHash = 'demo123'; // This will be stored in the user record
+    const passwordHash = password; // This will be stored in the user record
     const tenantId = '1';
 
     console.log('Creating test user:', { email, name, role });
@@ -119,9 +120,19 @@ app.post('/api/auth/login', zValidator('json', LoginSchema), async (c) => {
     
     if (userResult) {
       const user = userResult as unknown as User;
-      // Verify password (in production, use proper password hashing)
-      // For demo purposes, check against stored password hash
-      if (password === user.password_hash) {
+      // Verify password using bcrypt for hashed passwords, fallback to plain text for demo
+      let isValidPassword = false;
+      
+      // Check if password looks like a bcrypt hash (starts with $2b$, $2a$, or $2y$)
+      if (user.password_hash && user.password_hash.startsWith('$2')) {
+        // Use bcrypt for hashed passwords
+        isValidPassword = await bcrypt.compare(password, user.password_hash);
+      } else {
+        // Fallback to plain text comparison for demo/test users
+        isValidPassword = (password === user.password_hash);
+      }
+      
+      if (isValidPassword) {
         
         // Simple license check - check if user has an active license
         let licenseStatus = 'active'; // Default for demo
@@ -278,7 +289,7 @@ app.get('/api/auth/google/callback', async (c) => {
 
 // Apply JWT middleware to all /api/* routes EXCEPT /api/auth/login
 app.use('/api/*', async (c, next) => {
-  // Skip JWT for login endpoint
+  // Skip JWT for login endpoint only
   if (c.req.path === '/api/auth/login') {
     await next();
     return;
@@ -296,7 +307,7 @@ app.use('/api/*', async (c, next) => {
 
 // Convert JWT payload to user object for license middleware
 app.use('/api/*', async (c, next) => {
-  // Skip for login endpoint
+  // Skip for login endpoint only
   if (c.req.path === '/api/auth/login') {
     await next();
     return;
@@ -311,7 +322,7 @@ app.use('/api/*', async (c, next) => {
   if (jwtPayload) {
     // Convert JWT payload to user object format expected by license middleware
     const user: User = {
-      id: jwtPayload.id, // JWT payload uses 'id' not 'userId'
+      id: jwtPayload.userId || jwtPayload.id, // Handle both 'userId' and 'id' formats
       email: jwtPayload.email,
       name: jwtPayload.name,
       role: jwtPayload.role,
@@ -331,7 +342,7 @@ app.use('/api/*', async (c, next) => {
 
 // Track API usage for all authenticated API calls (simplified)
 app.use('/api/*', async (c, next) => {
-  // Skip for login endpoint
+  // Skip for login endpoint only
   if (c.req.path === '/api/auth/login') {
     await next();
     return;
@@ -384,6 +395,103 @@ app.get('/api/debug/user', async (c) => {
     },
     timestamp: new Date().toISOString()
   });
+});
+
+// Search endpoint - matches frontend expectation
+app.get('/api/search', async (c) => {
+  try {
+    // Try to get user from JWT, but allow fallback for testing
+    let user = c.get('user' as any);
+    let role = 'parent'; // Default role for public access
+    
+    if (!user) {
+      // For testing purposes, allow access without authentication
+      // In production, this should require authentication
+      console.log('Search endpoint accessed without authentication - using default role');
+      user = { role: 'parent', id: '0', email: 'guest@example.com' };
+      role = 'parent';
+    } else {
+      role = user.role;
+    }
+
+    const query = c.req.query('q') || '';
+    const limit = parseInt(c.req.query('limit') || '50');
+    const offset = parseInt(c.req.query('offset') || '0');
+    
+    // Role-based content filtering - map actual category names to access levels
+    let allowedCategories: string[] = [];
+    switch (role) {
+      case 'admin':
+      case 'doctor':
+        allowedCategories = ['ADHD Assessment', 'Anxiety Management', 'Autism Support', 'Behavioral Interventions', 'Crisis Intervention', 'Depression Screening', 'Family Therapy', 'Sleep Hygiene', 'Social Skills'];
+        break;
+      case 'therapist':
+      case 'psychologist':
+      case 'educator':
+        allowedCategories = ['ADHD Assessment', 'Anxiety Management', 'Autism Support', 'Behavioral Interventions', 'Depression Screening', 'Family Therapy', 'Sleep Hygiene', 'Social Skills'];
+        break;
+      case 'parent':
+        allowedCategories = ['Behavioral Interventions', 'Family Therapy', 'Sleep Hygiene', 'Social Skills'];
+        break;
+      default:
+        allowedCategories = ['Behavioral Interventions', 'Family Therapy', 'Sleep Hygiene', 'Social Skills'];
+    }
+
+    const db = getDatabase(c);
+    
+    // Build search query with role-based filtering
+    let sql = `
+      SELECT id, title_en as title, content_en as content, category, tags, 
+             created_at, updated_at
+      FROM cards 
+      WHERE category IN (${allowedCategories.map(() => '?').join(',')})
+    `;
+    
+    const params: any[] = [...allowedCategories];
+    
+    // Add search query if provided
+    if (query.trim()) {
+      sql += ` AND (
+        title_en LIKE ? OR 
+        content_en LIKE ? OR 
+        category LIKE ? OR 
+        EXISTS (
+          SELECT 1 FROM json_each(tags) 
+          WHERE json_each.value LIKE ?
+        )
+      )`;
+      const searchTerm = `%${query}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    
+    sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+    
+    const { results } = await db.prepare(sql).bind(...params).all();
+    
+    // Format results to match expected structure
+    const formattedResults = results.map((card: any) => ({
+      id: card.id,
+      title: card.title,
+      content: card.content,
+      category: card.category,
+      tags: typeof card.tags === 'string' ? JSON.parse(card.tags) : card.tags || [],
+      createdAt: card.created_at,
+      updatedAt: card.updated_at
+    }));
+    
+    return c.json({
+      results: formattedResults,
+      total: formattedResults.length,
+      query,
+      role: role,
+      allowedCategories
+    });
+    
+  } catch (error) {
+    console.error('Search error:', error);
+    return c.json({ error: 'Search failed', details: error instanceof Error ? error.message : 'Unknown error' }, 500);
+  }
 });
 
 const CreateUserSchema = z.object({
@@ -566,6 +674,120 @@ app.post('/api/assessments', async (c) => {
     return c.json({ id: assessmentId, message: 'Assessment created' }, 201);
   } catch (error) {
     return c.json({ error: 'Failed to create assessment' }, 500);
+  }
+});
+
+// Simple search endpoint for frontend compatibility
+app.get('/api/search', async (c) => {
+  try {
+    const query = c.req.query('q') || '';
+    
+    // Try to get user from JWT middleware first
+    let user = c.get('user' as any);
+    
+    // If no user from JWT, try to get from JWT payload directly
+    if (!user) {
+      const jwtPayload = c.get('jwtPayload' as any);
+      if (jwtPayload) {
+        user = {
+          id: jwtPayload.userId || jwtPayload.id,
+          email: jwtPayload.email,
+          name: jwtPayload.name,
+          role: jwtPayload.role,
+          tenant_id: jwtPayload.tenantId,
+          created_at: jwtPayload.createdAt
+        };
+      }
+    }
+    
+    // If still no user, return error
+    if (!user) {
+      return c.json({ error: 'User not found in token' }, 401);
+    }
+
+    const db = getDatabase(c);
+    
+    // Build search query with role-based filtering
+    let sql = `
+      SELECT c.*, 0 as usage_count, 0 as avg_rating
+      FROM cards c
+      WHERE c.tenant_id = ?
+    `;
+    
+    const params = [user.tenant_id || 1];
+    
+    // Apply search query if provided
+    if (query.trim()) {
+      sql += ` AND (
+        c.title_en LIKE ? OR c.title_ar LIKE ? OR
+        c.content_en LIKE ? OR c.content_ar LIKE ? OR
+        c.category LIKE ? OR c.tags LIKE ?
+      )`;
+      const searchTerm = `%${query}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+    }
+    
+    // Role-based content filtering - professionals get full access
+    const roleContentAccess = {
+      'admin': ['medical', 'therapeutic', 'educational', 'behavioral', 'developmental'],
+      'doctor': ['medical', 'therapeutic', 'educational', 'behavioral', 'developmental'],
+      'therapist': ['therapeutic', 'educational', 'behavioral', 'developmental'],
+      'educator': ['educational', 'behavioral'],
+      'parent': ['educational']
+    };
+    
+    const allowedCategories = roleContentAccess[user.role as keyof typeof roleContentAccess] || ['educational'];
+    
+    // Apply role-based category filtering
+    if (user.role !== 'admin') {
+      sql += ` AND c.category IN (${allowedCategories.map(() => '?').join(',')})`;
+      params.push(...allowedCategories);
+    }
+    
+    sql += ` ORDER BY c.created_at DESC LIMIT 50`;
+    
+    const { results } = await db.prepare(sql).bind(...params).all();
+    
+    // Format results for response
+    const formattedResults = results.map((card: any) => ({
+      id: card.id,
+      title: {
+        en: card.title_en,
+        ar: card.title_ar || '',
+        fr: card.title_fr || '',
+        es: card.title_es || ''
+      },
+      content: {
+        en: card.content_en,
+        ar: card.content_ar || '',
+        fr: card.content_fr || '',
+        es: card.content_es || ''
+      },
+      category: card.category,
+      tags: card.tags ? JSON.parse(card.tags) : [],
+      metadata: card.metadata ? JSON.parse(card.metadata) : {},
+      access_level: 'public',
+      role_permissions: [],
+      created_at: card.created_at,
+      updated_at: card.updated_at,
+      avg_rating: card.avg_rating || 0,
+      usage_count: card.usage_count || 0
+    }));
+    
+    return c.json({
+      success: true,
+      results: formattedResults,
+      total: formattedResults.length,
+      query: query
+    });
+    
+  } catch (error) {
+    console.error('Search error:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Search failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, 500);
   }
 });
 

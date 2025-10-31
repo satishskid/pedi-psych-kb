@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import app from '../apps/ops-api/src/index'
+import app from '../apps/app-api/src/index'
 
 class MemoryKV {
   private store = new Map<string, string>()
@@ -24,16 +24,59 @@ class MemoryKV {
   }
 }
 
+// Mock database for testing
+function createMockDb() {
+  return {
+    prepare(sql: string) {
+      return {
+        bind: (...params: any[]) => {
+          return {
+            first: async () => {
+              // Mock admin user for login
+              if (sql.includes('FROM users WHERE email = ?') && params[0] === 'admin@example.com') {
+                return {
+                  id: '1',
+                  email: 'admin@example.com',
+                  password_hash: '$2b$10$jivahGdaL.t0RaP873Lp6ek2c9Sr6aJFhV/KElqKSRcNJEOuTrpuG', // bcrypt hash for 'admin123'
+                  name: 'Admin User',
+                  role: 'admin',
+                  tenant_id: '1',
+                  created_at: '2025-10-28 00:53:10',
+                  updated_at: '2025-10-30T11:46:59.314Z'
+                };
+              }
+              // License check
+              if (sql.includes('FROM user_licenses ul') && sql.includes('JOIN licenses l') && sql.includes('JOIN license_types lt')) {
+                return {
+                  status: 'active',
+                  license_type_name: 'basic'
+                };
+              }
+              return null;
+            },
+            run: async () => ({ success: true }),
+            all: async () => ({ results: [] })
+          };
+        },
+        first: async () => null,
+        all: async () => ({ results: [] }),
+        run: async () => ({ success: true })
+      };
+    }
+  } as any;
+}
+
 const env = {
   POLICY_STORE: new MemoryKV(),
   USER_STORE: new MemoryKV(),
   JWT_SECRET: 'test-secret',
+  DB: createMockDb()
 }
 
 describe('Policy CRUD', () => {
   it('creates, lists, gets, and deletes a policy', async () => {
     // Login as admin
-    const loginRes = await app.request('/auth/login', {
+    const loginRes = await app.request('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'admin@example.com', password: 'admin123' })

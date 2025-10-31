@@ -9,8 +9,10 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "hono": "^3.8.0",
-    "@pedi-psych/shared": "file:../../packages/shared"
+    "@clerk/backend": "^2.19.0",
+    "@pedi-psych/shared": "file:../../packages/shared",
+    "bcryptjs": "^3.0.2",
+    "hono": "^3.8.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241018.0",

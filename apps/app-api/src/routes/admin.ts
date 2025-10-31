@@ -4,6 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { HTTPException } from 'hono/http-exception';
 import { licenseMiddleware } from '../middleware/license';
 import { LicenseFeatures } from '@pedi-psych/shared';
+import bcrypt from 'bcryptjs';
 import type { Env } from '../index';
 
 // Helper function to get database binding
@@ -17,8 +18,8 @@ function getDatabase(c: any) {
 
 // Helper function for password hashing (simplified for demo)
 async function hashPassword(password: string): Promise<string> {
-  // In production, use proper password hashing like bcrypt
-  return btoa(password); // Simple base64 encoding for demo
+  // Use bcrypt for proper password hashing
+  return bcrypt.hash(password, 10);
 }
 
 const adminRoutes = new Hono<{ Bindings: Env }>();
@@ -38,6 +39,7 @@ const UpdateUserSchema = z.object({
   role: z.enum(['admin', 'doctor', 'therapist', 'educator', 'parent']).optional(),
   metadata: z.record(z.any()).optional(),
   is_active: z.boolean().optional(),
+  password: z.string().min(8).optional(),
 });
 
 const TenantSettingsSchema = z.object({
@@ -341,6 +343,11 @@ adminRoutes.put('/admin/users/:id',
     if (data.is_active !== undefined) {
       updates.push('is_active = ?');
       params.push(data.is_active);
+    }
+    
+    if (data.password !== undefined) {
+      updates.push('password_hash = ?');
+      params.push(await hashPassword(data.password));
     }
     
     updates.push('updated_at = ?');

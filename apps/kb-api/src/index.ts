@@ -148,6 +148,66 @@ async function getCardById(kv: KVNamespace, id: string, language: string, role: 
   return card;
 }
 
+// Deep Dive endpoint: free LLM-powered deeper knowledge
+const DeepDiveRequestSchema = z.object({
+  condition: z.string().min(1),
+  role: z.enum(['admin', 'doctor', 'psychologist', 'parent', 'educator']),
+  prompt: z.string().min(1).max(1000),
+});
+
+app.post('/api/kb/deepdive', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { condition, role, prompt } = DeepDiveRequestSchema.parse(body);
+
+    // Optional: cache deep-dive responses by condition+role+prompt hash
+    const promptHash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${condition}:${role}:${prompt}`));
+    const cacheKey = `deepdive:${Array.from(new Uint8Array(promptHash)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+    const cached = await c.env.KB_CACHE.get(cacheKey);
+    if (cached) {
+      return c.json(JSON.parse(cached));
+    }
+
+    // Build system prompt with pediatric psych context
+    const systemPrompt = `You are a pediatric mental-health expert assistant.
+- User role: ${role}
+- Condition: ${condition}
+- Provide concise, evidence-based guidance.
+- Always emphasize safety, family-centered care, and cultural sensitivity for India & GCC populations.
+- If the question is outside your scope, advise consulting a licensed clinician.`;
+
+    // Call Cloudflare Workers AI (Gemma 2B is free & fast)
+    const ai = new (c.env as any).AI(); // Workers AI binding
+    const answer = await ai.run('@cf/google/gemma-2b-it-lora', {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ],
+      stream: false,
+    });
+
+    const result = {
+      condition,
+      role,
+      prompt,
+      response: answer.response,
+      model: '@cf/google/gemma-2b-it-lora',
+      cached: false,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Cache for 1 hour
+    await c.env.KB_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 3600 });
+    return c.json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return c.json({ error: 'Invalid request body', details: error.errors }, 400);
+    }
+    console.error('DeepDive error:', error);
+    return c.json({ error: 'Deep dive failed' }, 500);
+  }
+});
+
 async function getAllCards(kv: KVNamespace): Promise<Card[]> {
   const cardsData = await kv.get('cards:all');
   
