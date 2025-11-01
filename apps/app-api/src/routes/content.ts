@@ -5,16 +5,7 @@ import { HTTPException } from 'hono/http-exception';
 import { licenseMiddleware, trackAPIUsage } from '../middleware/license';
 import { LicenseFeatures } from '@pedi-psych/shared';
 import type { Env } from '../index';
-
-// Helper function to get database instance
-function getDatabase(c: any) {
-  if (c.env.DB) {
-    return c.env.DB;
-  } else if (c.env.DB_PROD) {
-    return c.env.DB_PROD;
-  }
-  throw new HTTPException(500, { message: 'Database not available' });
-}
+import { getDatabase } from '../db';
 
 const contentRoutes = new Hono<{ Bindings: Env }>();
 

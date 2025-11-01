@@ -6,15 +6,7 @@ import { licenseMiddleware } from '../middleware/license';
 import { LicenseFeatures } from '@pedi-psych/shared';
 import bcrypt from 'bcryptjs';
 import type { Env } from '../index';
-
-// Helper function to get database binding
-function getDatabase(c: any) {
-  const db = c.env.DB || c.env.DB_PROD;
-  if (!db) {
-    throw new HTTPException(500, { message: 'Database binding not found' });
-  }
-  return db;
-}
+import { getDatabase } from '../db';
 
 // Helper function for password hashing (simplified for demo)
 async function hashPassword(password: string): Promise<string> {

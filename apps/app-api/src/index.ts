@@ -13,18 +13,10 @@ import adminRoutes from './routes/admin';
 import { licenseMiddleware, trackAPIUsage } from './middleware/license';
 import { apiUsageMiddleware } from './middleware/api-usage';
 import { createClerkClient } from '@clerk/backend'
-
-// Helper function to get database binding
-function getDatabase(c: any) {
-  const db = c.env.DB || c.env.DB_PROD;
-  if (!db) {
-    throw new Error('Database binding not found');
-  }
-  return db;
-}
+import { getDatabase } from './db';
 
 // Google OAuth configuration
-const GOOGLE_REDIRECT_URI = 'https://pedi-app-prod.devadmin-27f.workers.dev/api/auth/google/callback';
+const GOOGLE_REDIRECT_URI = '/api/auth/google/callback';
 
 export interface Env {
   DB: D1Database;
@@ -32,6 +24,8 @@ export interface Env {
   REGION_DEFAULT: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  API_BASE_URL: string;
+  FRONTEND_URL: string;
   [key: string]: any; // Index signature for compatibility
 }
 
@@ -203,7 +197,7 @@ app.get('/api/auth/google/callback', async (c) => {
     const clientSecret = c.env.GOOGLE_CLIENT_SECRET;
     
     if (!clientId || !clientSecret) {
-      return c.redirect('https://d29ad10a.pedi-psych-kb-frontend.pages.dev/login?error=google_not_configured');
+      return c.redirect(`${c.env.FRONTEND_URL}/login?error=google_not_configured`);
     }
 
     const code = c.req.query('code');
@@ -220,7 +214,7 @@ app.get('/api/auth/google/callback', async (c) => {
         client_secret: clientSecret,
         code: code,
         grant_type: 'authorization_code',
-        redirect_uri: GOOGLE_REDIRECT_URI,
+        redirect_uri: `${c.env.API_BASE_URL}${GOOGLE_REDIRECT_URI}`,
       }),
     });
 
@@ -278,12 +272,11 @@ app.get('/api/auth/google/callback', async (c) => {
     }, c.env.JWT_SECRET);
 
     // Redirect back to frontend with token
-    const frontendUrl = 'https://d29ad10a.pedi-psych-kb-frontend.pages.dev';
-    return c.redirect(`${frontendUrl}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
+    return c.redirect(`${c.env.FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
 
   } catch (error) {
     console.error('Google OAuth error:', error);
-    return c.redirect('https://d29ad10a.pedi-psych-kb-frontend.pages.dev/login?error=google_auth_failed');
+    return c.redirect(`${c.env.FRONTEND_URL}/login?error=google_auth_failed`);
   }
 });
 
